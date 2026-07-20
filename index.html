@@ -2142,6 +2142,51 @@ function sameWeekKey(a,b){
   if(na.y && nb.y) return na.y===nb.y && na.n===nb.n;
   return na.n===nb.n;
 }
+/** Đếm ngày theo tuần ISO từ TotalKH + DT-Ngày — không lọc tháng (tuần cắt tháng vẫn đủ 7 ngày). */
+function buildWeekDaysMap(totalKH, dtNgay){
+  const byWeek={};
+  const add=iso=>{
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return;
+    const wk=isoWeekFromIsoDate(iso).key;
+    if(!wk) return;
+    const key=Object.keys(byWeek).find(k=>sameWeekKey(k,wk))||wk;
+    if(!byWeek[key]) byWeek[key]=new Set();
+    byWeek[key].add(iso);
+  };
+  if(totalKH&&totalKH.length>1){
+    const h=totalKH[0];
+    const iVung=idxOf(h,'Vung');
+    const iNgayChuan=idxNgayChuanHoa(h);
+    const iNgay=idxOf(h,'Ngay');
+    for(let i=1;i<totalKH.length;i++){
+      const r=totalKH[i];
+      if(iVung>=0 && (r[iVung]||'').trim() && !isVungTnt(r[iVung])) continue;
+      add(resolveSheetNgayIso(r, iNgayChuan, iNgay));
+    }
+  }
+  if(dtNgay&&dtNgay.length>1){
+    const h=dtNgay[0], iNgay=idxOf(h,'Ngay'), iAM=idxOf(h,'AM Chuẩn');
+    for(let i=1;i<dtNgay.length;i++){
+      const r=dtNgay[i];
+      if(!r[iAM]||!r[iNgay]) continue;
+      add(normalizeNgayToIso(r[iNgay]));
+    }
+  }
+  return byWeek;
+}
+function enrichByWeekDays(byWeek, weekDaysMap){
+  const out={};
+  Object.entries(byWeek||{}).forEach(([k,v])=>{
+    out[k]={...v, days:new Set(v&&v.days?[...v.days]:[])};
+  });
+  Object.entries(weekDaysMap||{}).forEach(([wk, days])=>{
+    const key=Object.keys(out).find(k=>sameWeekKey(k,wk))||wk;
+    if(!out[key]) out[key]={dt:0,dtGiu:0,dtBanMoi:0,volG:0,slkhGSum:0,khG:new Set(),days:new Set(),byGrp:{A:0,BCD:0,EF:0,G:0},byAm:{},byAmAll:{},byAmG:{}};
+    else if(!out[key].days) out[key].days=new Set();
+    days.forEach(d=>out[key].days.add(d));
+  });
+  return out;
+}
 function currentIsoWeekKey(d){
   const dt=d||new Date();
   const iso=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
@@ -3907,6 +3952,7 @@ function buildWeeklyReportData(){
 
   const monthPn = pnRecs.filter(r=>r.thang&&thangEq(r.thang, thang));
   const tkMetrics = parseTotalKHMetrics(totalKH, thang);
+  if(tkMetrics) tkMetrics.byWeek=enrichByWeekDays(tkMetrics.byWeek, buildWeekDaysMap(totalKH, dtNgay));
   let weekCur='', weekPrev='', mtdGiu=0, mtdBanMoi=0;
   let wowLtc='—', wowGiu='—', wowBanMoi='—', slkhG=0, volG=0;
   let weekCompareCur='', weekComparePrev='', weekCurIncomplete=false;
@@ -4623,9 +4669,15 @@ ${giaiPhapHtml}
 
 function listDocWeekOptions(){
   const totalKH=(window._DATA&&window._DATA.totalKH)||[];
+  const dtNgay=(window._DATA&&window._DATA.dtNgay)||[];
   const thang=currentThang();
   const tk=parseTotalKHMetrics(totalKH, thang);
-  let weeks=sortedWeekKeys((tk&&tk.weekKeys)||Object.keys((tk&&tk.byWeek)||{}));
+  const weekDaysMap=buildWeekDaysMap(totalKH, dtNgay);
+  if(tk) tk.byWeek=enrichByWeekDays(tk.byWeek, weekDaysMap);
+  let weeks=sortedWeekKeys(uniqueList([
+    ...(tk&&tk.weekKeys)||[],
+    ...Object.keys(weekDaysMap)
+  ]));
   if(!weeks.length){
     const {recs}=parseTotalKHNhomRecs(totalKH);
     weeks=sortedWeekKeys(recs.map(r=>r.tuan).filter(Boolean));
@@ -4645,8 +4697,13 @@ function openExportWeekModal(){
   const cmp=resolveDocWeekCompare(weeks, (tk&&tk.byWeek)||{}, (tk&&tk.weekCur)||weeks[weeks.length-1], (tk&&tk.weekPrev)||weeks[weeks.length-2]||'');
   const selCur=document.getElementById('docWeekCur');
   const selPrev=document.getElementById('docWeekPrev');
+  const byWeek=(tk&&tk.byWeek)||{};
+  const weekDays=w=>{
+    const key=Object.keys(byWeek).find(k=>sameWeekKey(k,w))||w;
+    return (byWeek[key]&&byWeek[key].days)?byWeek[key].days.size:0;
+  };
   const opts=weeks.slice().reverse().map(w=>{
-    const days=(tk&&tk.byWeek&&tk.byWeek[w]&&tk.byWeek[w].days)?tk.byWeek[w].days.size:0;
+    const days=weekDays(w);
     return `<option value="${w}">${weekLabelShort(w)}${days?` · ${days} ngày`:''}</option>`;
   }).join('');
   selCur.innerHTML=opts;
