@@ -202,56 +202,20 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
 .lv-head .cube{width:36px;height:36px;border-radius:10px;background:linear-gradient(145deg,#F97316,#EA580C);box-shadow:0 8px 24px rgba(249,115,22,.45),inset 0 1px 0 rgba(255,255,255,.35);display:grid;place-items:center;color:#fff;font-weight:900;font-size:11px;letter-spacing:-.5px}
 .lv-head .ht{color:#fff;font-size:15px;font-weight:800;letter-spacing:-.3px}
 .lv-head .hs{color:rgba(255,255,255,.45);font-size:11px;font-weight:500;margin-top:2px}
-.lv-kpis{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
-.lv-kpi{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px;backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,.25);animation:lvFloat 6s ease-in-out infinite}
-.lv-kpi:nth-child(2){animation-delay:.4s}.lv-kpi:nth-child(3){animation-delay:.8s}.lv-kpi:nth-child(4){animation-delay:1.2s}
-.lv-kpi .k-lbl{font-size:10px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px}
-.lv-kpi .k-val{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.4px;line-height:1.1}
-.lv-kpi .k-val small{font-size:11px;font-weight:600;opacity:.55;margin-left:3px}
-.lv-kpi .k-up{font-size:11px;font-weight:700;color:#34D399;margin-top:5px}
-.lv-mid{position:relative;z-index:2;flex:1;display:grid;grid-template-columns:1.15fr .95fr;gap:12px;min-height:0}
-.lv-glass{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;backdrop-filter:blur(18px);box-shadow:0 12px 40px rgba(0,0,0,.3);padding:14px;overflow:hidden;position:relative}
-.lv-glass .g-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.55);margin-bottom:10px;letter-spacing:.2px}
-.lv-map-wrap{position:relative;height:100%;min-height:220px;display:flex;align-items:center;justify-content:center}
-.lv-map-wrap svg.vn-map{width:min(280px,70%);height:auto;filter:drop-shadow(0 0 24px rgba(56,189,248,.45))}
-.lv-map-label{position:absolute;font-size:9px;font-weight:700;color:#E0F2FE;text-shadow:0 0 8px rgba(56,189,248,.8)}
-.lv-map-label.hn{top:18%;left:42%}.lv-map-label.dn{top:48%;left:48%}.lv-map-label.hcm{bottom:14%;left:38%}
-.lv-truck{position:absolute;right:8%;bottom:10%;font-size:28px;filter:drop-shadow(0 8px 16px rgba(37,99,235,.5));animation:lvFloat 5s ease-in-out infinite}
-.lv-wh{position:absolute;left:6%;bottom:12%;width:64px;height:48px;border-radius:8px;background:linear-gradient(160deg,#1E3A5F,#0F172A);border:1px solid rgba(56,189,248,.35);box-shadow:0 0 20px rgba(37,99,235,.35)}
-.lv-wh::before{content:'GHN';position:absolute;inset:0;display:grid;place-items:center;font-size:10px;font-weight:800;color:#F97316}
-.lv-right-col{display:flex;flex-direction:column;gap:10px;min-height:0}
-.lv-charts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.lv-line{height:56px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 56' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop stop-color='%2338BDF8' stop-opacity='.35'/%3E%3Cstop offset='1' stop-color='%2338BDF8' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 40 C30 38 40 12 70 18 S120 48 150 28 S190 10 220 16 V56 H0Z' fill='url(%23g)'/%3E%3Cpath d='M0 40 C30 38 40 12 70 18 S120 48 150 28 S190 10 220 16' stroke='%2338BDF8' stroke-width='2.5'/%3E%3Ccircle cx='150' cy='28' r='4' fill='%23fff' stroke='%2338BDF8' stroke-width='2'/%3E%3C/svg%3E") center/cover no-repeat}
-.lv-donut-row{display:flex;align-items:center;gap:10px}
-.lv-donut{width:58px;height:58px;border-radius:50%;background:conic-gradient(#2563EB 0 42.5%,#38BDF8 42.5% 61.2%,#7C3AED 61.2% 100%);mask:radial-gradient(farthest-side,transparent 55%,#000 57%);-webkit-mask:radial-gradient(farthest-side,transparent 55%,#000 57%);flex-shrink:0;box-shadow:0 0 20px rgba(37,99,235,.35)}
-.lv-legend{font-size:9px;color:rgba(255,255,255,.6);line-height:1.65}
-.lv-legend b{color:#fff;font-weight:700}
-.lv-bars{display:flex;align-items:flex-end;gap:5px;height:52px}
-.lv-bars span{flex:1;display:flex;gap:2px;align-items:flex-end;height:100%}
-.lv-bars i{flex:1;border-radius:3px 3px 0 0;background:#2563EB}
-.lv-bars i.b2{background:rgba(56,189,248,.45)}
-.lv-bars span:nth-child(1) i:first-child{height:45%}.lv-bars span:nth-child(1) i.b2{height:35%}
-.lv-bars span:nth-child(2) i:first-child{height:62%}.lv-bars span:nth-child(2) i.b2{height:50%}
-.lv-bars span:nth-child(3) i:first-child{height:78%}.lv-bars span:nth-child(3) i.b2{height:60%}
-.lv-bars span:nth-child(4) i:first-child{height:70%}.lv-bars span:nth-child(4) i.b2{height:55%}
-.lv-bars span:nth-child(5) i:first-child{height:88%}.lv-bars span:nth-child(5) i.b2{height:72%}
-.lv-bars span:nth-child(6) i:first-child{height:95%}.lv-bars span:nth-child(6) i.b2{height:80%}
-.lv-list{font-size:10px;color:rgba(255,255,255,.7)}
-.lv-list li{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06);list-style:none}
-.lv-list li:last-child{border-bottom:0}
-.lv-list .rank{color:#38BDF8;font-weight:800;width:14px}
-.lv-list .amt{color:#fff;font-weight:700}
-.lv-ai{display:flex;align-items:center;gap:10px;padding:10px 12px!important}
-.lv-ai .ai-badge{font-size:9px;font-weight:800;background:linear-gradient(90deg,#7C3AED,#2563EB);color:#fff;padding:3px 7px;border-radius:6px;letter-spacing:.3px}
-.lv-ai .ai-txt{font-size:11px;color:rgba(255,255,255,.75);line-height:1.35}
-.lv-ai .ai-txt b{color:#38BDF8;font-size:13px;display:block}
-.lv-status{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px}
-.lv-status span{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,.7)}
-.lv-status i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.lv-dock{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
-.lv-dock .dock-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:11px;font-weight:600;color:rgba(255,255,255,.7)}
-.lv-dock .dock-item svg{width:16px;height:16px;stroke:#38BDF8;fill:none;stroke-width:2;flex-shrink:0}
-@keyframes lvFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.lv-provinces{position:relative;z-index:2;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px}
+.lv-prov-chip{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:9px 8px;text-align:center;font-size:11px;font-weight:700;color:#fff;letter-spacing:-.1px;backdrop-filter:blur(12px)}
+.lv-prov-chip span{display:block;font-size:9px;font-weight:500;color:rgba(255,255,255,.45);margin-top:2px}
+.lv-map-main{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;min-height:0}
+.lv-map-main .lv-glass{flex:1;display:flex;flex-direction:column;padding:16px 18px}
+.lv-map-wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;min-height:280px}
+.lv-map-wrap svg.tnt-map{width:min(520px,95%);height:auto;max-height:100%;filter:drop-shadow(0 0 32px rgba(56,189,248,.25))}
+.lv-map-wrap .prov-path{stroke:#fff;stroke-width:1.8;stroke-linejoin:round;transition:fill-opacity .2s,filter .2s;cursor:default}
+.lv-map-wrap .prov-path:hover{fill-opacity:.95;filter:brightness(1.08)}
+.lv-map-wrap .prov-label{fill:#fff;font-size:12px;font-weight:800;font-family:'Inter',system-ui,sans-serif;pointer-events:none;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+.lv-map-note{font-size:10px;color:rgba(255,255,255,.4);text-align:center;margin-top:10px;font-weight:500}
+.lv-features{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.lv-features .dock-item{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:11px;font-weight:600;color:rgba(255,255,255,.55)}
+.lv-features .dock-item svg{width:15px;height:15px;stroke:#38BDF8;fill:none;stroke-width:2;flex-shrink:0;opacity:.7}
 
 .login-panel{flex:0 0 38%;display:flex;align-items:center;justify-content:center;padding:36px 28px;position:relative;background:linear-gradient(180deg,#080D1C 0%,#0B1224 50%,#0F172A 100%)}
 .login-panel::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 80% 15%,rgba(37,99,235,.18),transparent 45%),radial-gradient(ellipse at 20% 90%,rgba(124,58,237,.12),transparent 40%);pointer-events:none}
@@ -281,15 +245,16 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
 .login-card .lc-foot{margin-top:16px;text-align:center;font-size:11px;color:rgba(255,255,255,.32)}
 .login-card .lc-foot b{color:rgba(255,255,255,.5);font-weight:600}
 #gsiButtonContainer{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+.lv-glass{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;backdrop-filter:blur(18px);box-shadow:0 12px 40px rgba(0,0,0,.3);overflow:hidden;position:relative}
+.lv-glass .g-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.55);margin-bottom:10px;letter-spacing:.2px}
 @media(max-width:1100px){
-  .lv-kpis{grid-template-columns:repeat(2,1fr)}
-  .lv-mid{grid-template-columns:1fr}
-  .lv-map-wrap{min-height:160px}
+  .lv-provinces{grid-template-columns:repeat(3,1fr)}
+  .lv-map-wrap{min-height:220px}
 }
 @media(max-width:960px){
   .login-split{flex-direction:column}
-  .login-visual{flex:none;max-height:42vh;padding:16px}
-  .lv-dock,.lv-charts,.lv-right-col .lv-glass:nth-child(n+3){display:none}
+  .login-visual{flex:none;max-height:48vh;padding:16px}
+  .lv-features{display:none}
   .login-panel{flex:1;padding:20px 16px 32px}
 }
 </style>
@@ -307,74 +272,45 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
         <div class="cube">GHN</div>
         <div><div class="ht">GHN Digital</div><div class="hs">Vùng TNT · Revenue Analytics Platform</div></div>
       </div>
-      <div class="lv-kpis">
-        <div class="lv-kpi"><div class="k-lbl">Tổng Doanh Thu</div><div class="k-val">128.7<small>Tỷ</small></div><div class="k-up">▲ +18.6% vs tháng trước</div></div>
-        <div class="lv-kpi"><div class="k-lbl">Đơn Hàng</div><div class="k-val">2.456.789</div><div class="k-up">▲ +12.5% vs tháng trước</div></div>
-        <div class="lv-kpi"><div class="k-lbl">Khách Hàng</div><div class="k-val">892.456</div><div class="k-up">▲ +15.3% vs tháng trước</div></div>
-        <div class="lv-kpi"><div class="k-lbl">Giao Thành Công</div><div class="k-val">96.7<small>%</small></div><div class="k-up">▲ +2.1% vs tháng trước</div></div>
+      <div class="lv-provinces">
+        <div class="lv-prov-chip" style="border-color:rgba(255,138,86,.35)">Phú Thọ<span>Tỉnh</span></div>
+        <div class="lv-prov-chip" style="border-color:rgba(251,191,36,.35)">Vĩnh Phúc<span>Tỉnh</span></div>
+        <div class="lv-prov-chip" style="border-color:rgba(52,211,153,.35)">Hòa Bình<span>Tỉnh</span></div>
+        <div class="lv-prov-chip" style="border-color:rgba(167,139,250,.35)">Hà Nam<span>Tỉnh</span></div>
+        <div class="lv-prov-chip" style="border-color:rgba(96,165,250,.35)">Nam Định<span>Tỉnh</span></div>
+        <div class="lv-prov-chip" style="border-color:rgba(56,189,248,.35)">Ninh Bình<span>Tỉnh</span></div>
       </div>
-      <div class="lv-mid">
+      <div class="lv-map-main">
         <div class="lv-glass">
-          <div class="g-title">Mạng lưới giao nhận · Việt Nam</div>
+          <div class="g-title">Bản đồ ranh giới hành chính · Vùng TNT (6 tỉnh)</div>
           <div class="lv-map-wrap">
-            <svg class="vn-map" viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg">
+            <svg class="tnt-map" viewBox="0 0 480 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bản đồ 6 tỉnh Vùng TNT">
               <defs>
-                <linearGradient id="vnFill" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1D4ED8"/><stop offset="1" stop-color="#0EA5E9"/></linearGradient>
-                <filter id="vnGlow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                <filter id="tntGlow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
               </defs>
-              <path filter="url(#vnGlow)" fill="url(#vnFill)" opacity=".9" d="M95 18c8 2 22 8 28 18 4 8-2 16-8 22-6 8-4 18 2 26 8 10 6 22-2 30-6 6-4 14 2 20 10 12 4 28-8 34-8 4-10 14-6 22 4 10-2 18-12 22-8 4-14 12-12 22 2 8-4 16-12 18-6 2-14 8-12 16 2 6 0 14-6 16-8 4-18 2-22-6-2-6 2-14 8-16 4-2 6-8 2-12-6-8-2-18 6-22 6-4 8-12 4-18-6-10 0-20 10-24 8-4 10-14 4-20-8-10-2-22 8-28 6-4 8-12 4-18-4-8 2-16 10-18 6-2 12-8 10-14-2-6 4-12 12-14z"/>
-              <circle cx="108" cy="48" r="5" fill="#F8FAFC" stroke="#38BDF8" stroke-width="2"/>
-              <circle cx="118" cy="150" r="4.5" fill="#F8FAFC" stroke="#38BDF8" stroke-width="2"/>
-              <circle cx="95" cy="250" r="5" fill="#F8FAFC" stroke="#38BDF8" stroke-width="2"/>
-              <path d="M108 48 Q140 100 118 150 Q90 200 95 250" fill="none" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4 4" opacity=".85">
-                <animate attributeName="stroke-dashoffset" from="0" to="-40" dur="3s" repeatCount="indefinite"/>
-              </path>
+              <rect width="480" height="340" fill="rgba(255,255,255,0.02)" rx="12"/>
+              <path class="prov-path" data-prov="Phú Thọ" d="M58,34 L150,22 L200,42 L210,84 L176,116 L116,120 L70,98 L54,58 Z" fill="#FF8A56" fill-opacity=".82" filter="url(#tntGlow)"/>
+              <text class="prov-label" x="132" y="72" text-anchor="middle">Phú Thọ</text>
+              <path class="prov-path" data-prov="Vĩnh Phúc" d="M216,46 L286,28 L338,52 L332,98 L278,120 L224,100 L210,66 Z" fill="#FBBF24" fill-opacity=".8"/>
+              <text class="prov-label" x="272" y="76" text-anchor="middle">Vĩnh Phúc</text>
+              <path class="prov-path" data-prov="Hòa Bình" d="M50,128 L140,122 L182,150 L176,212 L132,252 L80,244 L48,202 L40,160 Z" fill="#34D399" fill-opacity=".74"/>
+              <text class="prov-label" x="108" y="190" text-anchor="middle">Hòa Bình</text>
+              <path class="prov-path" data-prov="Hà Nam" d="M188,154 L262,142 L302,170 L292,210 L244,230 L196,212 L182,178 Z" fill="#A78BFA" fill-opacity=".8"/>
+              <text class="prov-label" x="240" y="188" text-anchor="middle">Hà Nam</text>
+              <path class="prov-path" data-prov="Nam Định" d="M308,172 L388,150 L446,196 L450,254 L418,300 L358,304 L312,262 L300,212 Z" fill="#60A5FA" fill-opacity=".78"/>
+              <text class="prov-label" x="376" y="232" text-anchor="middle">Nam Định</text>
+              <path class="prov-path" data-prov="Ninh Bình" d="M138,260 L222,240 L288,250 L296,298 L256,332 L190,336 L138,310 L124,282 Z" fill="#38BDF8" fill-opacity=".74"/>
+              <text class="prov-label" x="208" y="294" text-anchor="middle">Ninh Bình</text>
             </svg>
-            <span class="lv-map-label hn">Hà Nội</span>
-            <span class="lv-map-label dn">Đà Nẵng</span>
-            <span class="lv-map-label hcm">TP.HCM</span>
-            <div class="lv-wh"></div>
-            <div class="lv-truck">🚚</div>
           </div>
-        </div>
-        <div class="lv-right-col">
-          <div class="lv-charts">
-            <div class="lv-glass"><div class="g-title">Doanh thu theo thời gian</div><div class="lv-line"></div></div>
-            <div class="lv-glass"><div class="g-title">Doanh thu theo vùng</div>
-              <div class="lv-donut-row"><div class="lv-donut"></div><div class="lv-legend"><div><b>42.5%</b> Miền Bắc</div><div><b>18.7%</b> Miền Trung</div><div><b>38.8%</b> Miền Nam</div></div></div>
-            </div>
-          </div>
-          <div class="lv-glass"><div class="g-title">So sánh doanh thu · Tháng này / trước</div>
-            <div class="lv-bars"><span><i></i><i class="b2"></i></span><span><i></i><i class="b2"></i></span><span><i></i><i class="b2"></i></span><span><i></i><i class="b2"></i></span><span><i></i><i class="b2"></i></span><span><i></i><i class="b2"></i></span></div>
-          </div>
-          <div class="lv-glass" style="padding:10px 12px">
-            <div class="g-title">Top bưu cục</div>
-            <ul class="lv-list">
-              <li><span><span class="rank">1</span> BC Vĩnh Yên</span><span class="amt">24.5 Tỷ</span></li>
-              <li><span><span class="rank">2</span> BC Việt Trì</span><span class="amt">19.8 Tỷ</span></li>
-              <li><span><span class="rank">3</span> BC Phúc Yên</span><span class="amt">16.2 Tỷ</span></li>
-            </ul>
-          </div>
-          <div class="lv-glass lv-ai">
-            <span class="ai-badge">AI</span>
-            <div class="ai-txt"><b>142.8 Tỷ VNĐ</b>Dự báo doanh thu tháng tới</div>
-          </div>
-          <div class="lv-glass" style="padding:10px 12px">
-            <div class="g-title">Tình trạng đơn hàng</div>
-            <div class="lv-status">
-              <span><i style="background:#FBBF24"></i> Đang lấy</span>
-              <span><i style="background:#38BDF8"></i> Đang giao</span>
-              <span><i style="background:#34D399"></i> Thành công</span>
-              <span><i style="background:#F87171"></i> Thất bại</span>
-            </div>
-          </div>
+          <div class="lv-map-note">Phú Thọ · Vĩnh Phúc · Hòa Bình · Hà Nam · Nam Định · Ninh Bình — Đăng nhập để xem báo cáo doanh thu thực tế</div>
         </div>
       </div>
-      <div class="lv-dock">
-        <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/><circle cx="12" cy="12" r="2"/></svg>AI Analytics</div>
-        <div class="dock-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Real-Time</div>
-        <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/></svg>Data Security</div>
-        <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.9-1A3.5 3.5 0 0 1 18 16H7z"/></svg>Cloud Native</div>
+      <div class="lv-features">
+        <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/></svg>Báo cáo DT</div>
+        <div class="dock-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Theo thời gian thực</div>
+        <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/></svg>Bảo mật GHN</div>
+        <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.9-1A3.5 3.5 0 0 1 18 16H7z"/></svg>Cloud</div>
       </div>
     </div>
     <div class="login-panel">
