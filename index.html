@@ -35,7 +35,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .export-btn:disabled{opacity:.45;cursor:not-allowed}
 .refresh-btn.spinning .spin{animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.last-update{color:rgba(255,255,255,.28);font-size:10px;text-align:center;padding:8px 12px 18px}
+.sidebar-widget{margin:8px 12px 4px;padding:14px 14px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px}
+.sidebar-widget .sw-clock-time{font-size:26px;font-weight:500;color:rgba(255,255,255,.92);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+.sidebar-widget .sw-clock-date{font-size:11px;color:rgba(255,255,255,.45);margin-top:6px;font-weight:500}
+.sidebar-widget .sw-quote-wrap{margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.07);min-height:48px}
+.sidebar-widget .sw-quote-label{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.35);margin-bottom:6px;font-weight:700}
+.sidebar-widget .sw-quote{font-size:12px;line-height:1.55;color:rgba(255,255,255,.55);font-weight:500;transition:opacity .45s ease,transform .45s ease}
+.sidebar-widget .sw-quote.is-out{opacity:0;transform:translateY(5px)}
+.last-update{color:rgba(255,255,255,.28);font-size:10px;text-align:center;padding:6px 12px 16px}
 .main{margin-left:var(--sidebar-w);flex:1;padding:28px 32px 72px;max-width:none;width:calc(100% - var(--sidebar-w))}
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;padding-bottom:20px;border-bottom:1px solid var(--border)}
 .page-title{font-size:22px;font-weight:800;letter-spacing:-.4px;color:var(--ink)}
@@ -194,29 +201,25 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
 .login-visual{flex:0 0 62%;position:relative;overflow:hidden;background:#1a1a1e;padding:28px 28px 20px;display:flex;flex-direction:column}
 .obsidian-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
 .lv-overlay{position:relative;z-index:2;display:flex;flex-direction:column;height:100%;pointer-events:none}
-.lv-head{display:flex;align-items:center;gap:12px;margin-bottom:auto;padding-top:4px}
-.lv-head .cube{width:34px;height:34px;border-radius:8px;background:linear-gradient(145deg,#7c3aed,#5b21b6);box-shadow:0 0 20px rgba(124,58,237,.35);display:grid;place-items:center;color:#fff;font-weight:800;font-size:10px;letter-spacing:-.4px}
+.lv-head{display:flex;align-items:center;gap:12px;padding-top:4px;flex-shrink:0}
+.lv-head .lv-logo{width:38px;height:38px;border-radius:9px;object-fit:cover;box-shadow:0 4px 16px rgba(255,107,0,.35)}
 .lv-head .ht{color:#e4e4e7;font-size:14px;font-weight:700;letter-spacing:-.2px}
 .lv-head .hs{color:#71717a;font-size:11px;font-weight:500;margin-top:2px}
-.lv-graph-caption{margin-top:auto;padding:20px 4px 8px}
-.lv-graph-caption .gc-title{font-size:13px;font-weight:600;color:#a1a1aa;letter-spacing:.02em}
-.lv-graph-caption .gc-sub{font-size:11px;color:#52525b;margin-top:6px;line-height:1.5;max-width:420px}
-.lv-graph-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.lv-legend-chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:600;color:#71717a;padding:5px 10px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
-.lv-legend-chip i{width:7px;height:7px;border-radius:50%;flex-shrink:0;box-shadow:0 0 8px currentColor}
-.lv-features{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.lv-network-stat{position:absolute;top:52px;right:20px;z-index:2;font-size:10px;color:#52525b;font-weight:600;text-align:right;line-height:1.6;pointer-events:none}
+.lv-network-stat b{color:#a1a1aa;font-weight:700}
+.lv-features{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:auto;padding-bottom:4px}
 .lv-features .dock-item{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:10px;font-weight:600;color:#52525b}
 .lv-features .dock-item svg{width:14px;height:14px;stroke:#7c3aed;fill:none;stroke-width:2;flex-shrink:0;opacity:.65}
 
-.login-panel{flex:0 0 38%;display:flex;align-items:center;justify-content:center;padding:36px 28px;position:relative;background:#1a1a1e;border-left:1px solid rgba(255,255,255,.06)}
-.login-panel::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(124,58,237,.08),transparent 60%);pointer-events:none}
-.login-card{position:relative;width:min(400px,100%);padding:38px 32px 28px;border-radius:20px;background:rgba(30,30,34,.85);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 24px 64px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
+.login-panel{flex:0 0 38%;display:flex;align-items:center;justify-content:center;padding:28px 24px;position:relative;background:#1a1a1e;border-left:1px solid rgba(255,255,255,.06);overflow-y:auto}
+.login-panel::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(255,138,0,.07),transparent 60%);pointer-events:none}
+.login-panel-inner{position:relative;width:min(420px,100%)}
+.login-card{position:relative;width:100%;padding:32px 28px 26px;border-radius:20px;background:rgba(30,30,34,.85);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 24px 64px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
 .lc-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
-.lc-cube{width:40px;height:40px;border-radius:10px;background:linear-gradient(145deg,#8b5cf6,#6d28d9);box-shadow:0 0 24px rgba(124,58,237,.4);position:relative}
-.lc-cube::after{content:'';position:absolute;inset:7px;border:1.5px solid rgba(255,255,255,.25);border-radius:5px}
+.lc-logo{width:42px;height:42px;border-radius:10px;object-fit:cover;box-shadow:0 4px 18px rgba(255,107,0,.4)}
 .lc-brand-name{font-size:20px;font-weight:800;color:#fafafa;letter-spacing:-.5px}
 .login-card h1{font-size:24px;font-weight:800;color:#fafafa;letter-spacing:-.5px;margin-bottom:10px;line-height:1.25}
-.login-card h1 .accent{color:#a78bfa}
+.login-card h1 .accent{color:#FF8A00}
 .login-card .lc-sub{font-size:13px;color:#71717a;line-height:1.55;margin-bottom:26px}
 .login-btns{display:flex;flex-direction:column;gap:10px}
 .login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s,border-color .15s;border:1px solid transparent;font-family:inherit}
@@ -254,18 +257,10 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
       <canvas id="obsidianGraph" class="obsidian-canvas"></canvas>
       <div class="lv-overlay">
         <div class="lv-head">
-          <div class="cube">GHN</div>
+          <img class="lv-logo" src="ghn-logo.png" alt="GHN">
           <div><div class="ht">GHN Digital</div><div class="hs">Vùng TNT · Revenue Analytics</div></div>
         </div>
-        <div class="lv-graph-caption">
-          <div class="gc-title">Knowledge graph · 6 tỉnh Vùng TNT</div>
-          <div class="gc-sub">Mỗi nút đại diện tỉnh, AM hoặc nhóm KH — kết nối mô phỏng mạng lưới báo cáo doanh thu.</div>
-          <div class="lv-graph-legend">
-            <span class="lv-legend-chip"><i style="background:#a78bfa;color:#a78bfa"></i>Tỉnh</span>
-            <span class="lv-legend-chip"><i style="background:#7c3aed;color:#7c3aed"></i>AM</span>
-            <span class="lv-legend-chip"><i style="background:#52525b;color:#52525b"></i>Nhóm KH</span>
-          </div>
-        </div>
+        <div class="lv-network-stat"><b>74</b> bưu cục<br>HNA · NDI · NBI → <b>TNT</b><br>Còn lại → <b>3 KCT</b> → TNT</div>
         <div class="lv-features">
           <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/></svg>Báo cáo DT</div>
           <div class="dock-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Thời gian thực</div>
@@ -275,8 +270,9 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
       </div>
     </div>
     <div class="login-panel">
-      <div class="login-card">
-        <div class="lc-brand"><div class="lc-cube"></div><div class="lc-brand-name">GHN</div></div>
+      <div class="login-panel-inner">
+        <div class="login-card">
+        <div class="lc-brand"><img class="lc-logo" src="ghn-logo.png" alt="GHN"><div class="lc-brand-name">GHN</div></div>
         <h1>GHN Revenue <span class="accent">Analytics</span></h1>
         <p class="lc-sub">Đăng nhập để truy cập hệ thống Báo Cáo Doanh Thu Vùng TNT</p>
         <div class="login-btns">
@@ -302,6 +298,7 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
         </div>
         <div class="lc-foot">Version <b>2.0</b> · Powered by <b>GHN Digital</b></div>
       </div>
+      </div>
     </div>
   </div>
 </div>
@@ -326,6 +323,16 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
   <button class="nav-item" data-page="nhomA" onclick="showPage('nhomA')"><span class="icon">⭐</span> Nhóm A</button>
   <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()"><span class="spin">🔄</span> Cập nhật dữ liệu</button>
   <button class="export-btn" id="exportDocBtn" onclick="openExportWeekModal()" disabled>📄 Xuất báo cáo tuần (.doc)</button>
+  <div class="sidebar-widget">
+    <div class="sw-clock">
+      <div id="lvClockTime" class="sw-clock-time">--:--:--</div>
+      <div id="lvClockDate" class="sw-clock-date">Đang tải...</div>
+    </div>
+    <div class="sw-quote-wrap">
+      <div class="sw-quote-label">Châm ngôn hôm nay</div>
+      <div id="lvQuote" class="sw-quote"></div>
+    </div>
+  </div>
   <div class="last-update" id="lastUpdate">Chưa tải dữ liệu</div>
 </div>
 
@@ -4851,37 +4858,138 @@ function _attachScrollHints(){
     }
   });
 }
+function initAppClockAndQuotes(){
+  const timeEl=document.getElementById('lvClockTime');
+  const dateEl=document.getElementById('lvClockDate');
+  const quoteEl=document.getElementById('lvQuote');
+  if(!timeEl||!dateEl||!quoteEl) return;
+  const VN_DAYS=['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+  const QUOTES=[
+    'Mỗi đơn hàng là một cơ hội tạo giá trị cho khách hàng.',
+    'Doanh thu không đến từ may mắn — đến từ sự kiên trì mỗi ngày.',
+    'Chăm sóc khách hàng tốt hôm nay là doanh thu bền vững ngày mai.',
+    'Đừng chờ cảm hứng — hãy bắt đầu từ cuộc gọi đầu tiên.',
+    'Thành công là tổng của những nỗ lực nhỏ lặp đi lặp lại.',
+    'Một AM giỏi không chỉ bán hàng — mà còn xây dựng niềm tin.',
+    'Hôm nay khó, ngày mai dễ hơn nếu bạn không bỏ cuộc hôm nay.',
+    'Số liệu phản ánh hành động — hãy hành động đúng từng ngày.',
+    'Khách hàng quan trọng nhất là khách hàng đang cần bạn lắng nghe.',
+    'Mục tiêu lớn bắt đầu từ KPI nhỏ hoàn thành đúng hạn.',
+    'Năng lượng tích cực lan tỏa — bắt đầu từ chính bạn.',
+    'Đừng so sánh với người khác — hãy vượt qua phiên bản hôm qua.',
+    'Mỗi tỉnh, mỗi AM — cùng một đội, một mục tiêu Vùng TNT.',
+    'Chất lượng dịch vụ là lợi thế cạnh tranh bền vững nhất.',
+    'Bán mới khó, nhưng mở ra tăng trưởng dài hạn cho vùng.',
+    'Giữ chân khách cũ quan trọng không kém việc tìm khách mới.',
+    'Kế hoạch rõ ràng + thực thi đều đặn = kết quả vượt trội.',
+    'Thất bại là dữ liệu — rút kinh nghiệm và đi tiếp.',
+    'Ưu tiên việc quan trọng, không chỉ việc gấp.',
+    'Giao tiếp rõ ràng với khách hàng giảm thiểu hiểu lầm và mất đơn.',
+    'Một ngày tốt bắt đầu từ thái độ tích cực lúc 8 giờ sáng.',
+    'Dữ liệu giúp bạn nhìn thấy điều mắt thường bỏ qua.',
+    'Hỗ trợ đồng đội — thành công của team là thành công của bạn.',
+    'Mỗi % tăng trưởng đều đếm — đừng xem nhẹ con số nhỏ.',
+    'Làm đúng việc nhỏ mỗi ngày, thành quả lớn sẽ đến.'
+  ];
+  let deck=[], quoteTimer=0;
+  function shuffle(arr){
+    const a=arr.slice();
+    for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    return a;
+  }
+  function nextQuote(){
+    if(!deck.length) deck=shuffle(QUOTES);
+    return deck.pop();
+  }
+  function showQuote(text, animate){
+    if(animate){
+      quoteEl.classList.add('is-out');
+      setTimeout(()=>{
+        quoteEl.textContent=text;
+        quoteEl.classList.remove('is-out');
+      },450);
+    } else {
+      quoteEl.textContent=text;
+    }
+  }
+  function tickClock(){
+    const now=new Date();
+    const parts=new Intl.DateTimeFormat('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(now);
+    const get=t=>{const p=parts.find(x=>x.type===t);return p?p.value:'00';};
+    timeEl.textContent=get('hour')+':'+get('minute')+':'+get('second');
+    const vnNow=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'}));
+    const day=VN_DAYS[vnNow.getDay()];
+    dateEl.textContent=day+', '+vnNow.getDate()+' tháng '+(vnNow.getMonth()+1)+', '+vnNow.getFullYear();
+  }
+  function rotateQuote(){
+    showQuote(nextQuote(), true);
+    const delay=9000+Math.floor(Math.random()*5000);
+    quoteTimer=setTimeout(rotateQuote, delay);
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+  showQuote(nextQuote(), false);
+  quoteTimer=setTimeout(rotateQuote, 8000);
+  window._loginQuoteCleanup=()=>clearTimeout(quoteTimer);
+}
 function initObsidianLoginGraph(){
   const canvas=document.getElementById('obsidianGraph');
   if(!canvas) return;
   const parent=canvas.parentElement;
   const ctx=canvas.getContext('2d');
   let W=0,H=0,dpr=1,raf=0;
-  const hubs=[
-    {label:'Phú Thọ',color:'#a78bfa',hx:0.30,hy:0.34},
-    {label:'Vĩnh Phúc',color:'#c4b5fd',hx:0.50,hy:0.26},
-    {label:'Hòa Bình',color:'#8b5cf6',hx:0.22,hy:0.54},
-    {label:'Hà Nam',color:'#a78bfa',hx:0.42,hy:0.50},
-    {label:'Nam Định',color:'#7c3aed',hx:0.62,hy:0.52},
-    {label:'Ninh Bình',color:'#9333ea',hx:0.36,hy:0.68}
+  const GRP_COLORS={HNA:'#a78bfa',HBI:'#34d399',NDI:'#60a5fa',NBI:'#38bdf8',PTH:'#fbbf24',VPH:'#fb923c'};
+  const DIRECT_GRPS=['HNA','NDI','NBI'];
+  const DIRECT_POS={
+    HNA:{x:0.82,y:0.40,spread:0.17,yBase:0.48},
+    NDI:{x:0.88,y:0.62,spread:0.19,yBase:0.52},
+    NBI:{x:0.74,y:0.78,spread:0.17,yBase:0.58}
+  };
+  const KHO_DEF=[
+    {id:'khoHB',label:'KCT Hòa Bình',x:0.14,y:0.26,groups:['HBI'],color:'#34d399'},
+    {id:'khoPT',label:'KCT Phú Thọ',x:0.42,y:0.26,groups:['PTH'],color:'#fbbf24'},
+    {id:'khoVP',label:'KCT Vĩnh Phúc',x:0.28,y:0.26,groups:['VPH'],color:'#fb923c'}
+  ];
+  const BC_RAW=[
+    ['HNA',['Duy Tiên','Bình Mỹ','Vĩnh Trụ','Phù Vân','Phủ Lý','Thanh Liêm','Lý Thường Kiệt','Kim Thanh','Đồng Văn']],
+    ['HBI',['Tân Lạc','Lạc Sơn','Tân Hòa','Lương Sơn','Đà Bắc','Lạc Thủy','Yên Thủy','Hòa Bình','Kim Bôi','Cao Phong','Kỳ Sơn']],
+    ['NDI',['Nam Định 1','Nam Định 2','Mỹ Lộc','Nam Minh','Ý Yên','Vạn Thắng','Hải Hậu','Giao Bình','Xuân Hưng','Hải An','Trực Ninh','Nghĩa Hưng','Minh Tân','Đông A']],
+    ['NBI',['Hoa Lư 1','Trung Sơn','Gia Viễn','Đại Hoàng','Quỳnh Lưu','Nho Quan','Yên Mô','Yên Khánh','Quang Thiện','Hoa Lư 2','Hoa Lư 3']],
+    ['PTH',['Cẩm Khê','Phú Thọ','Thanh Ba','Hạ Hòa','Đoan Hùng','Phù Ninh','Yên Lập','Tân Sơn','Thanh Miếu','Vân Phú','Tam Nông','Phùng Nguyên','Tu Vũ','Thanh Sơn']],
+    ['VPH',['Vĩnh Phúc','Bình Nguyên','Vĩnh Yên','Tam Hồng','Vĩnh Tường','Bình Xuyên','Xuân Hòa','Yên Lãng','Tam Dương','Hải Lựu','Phúc Yên','Thổ Tang','Tiên Lữ','Tam Dương Bắc','Lập Thạch']]
   ];
   const nodes=[], edges=[];
-  hubs.forEach((h,i)=>{nodes.push({id:'h'+i,x:h.hx,y:h.hy,ox:h.hx,oy:h.hy,r:5.5,color:h.color,label:h.label,hub:true,vx:0,vy:0});});
-  const amColors=['#7c3aed','#6d28d9','#8b5cf6'];
-  for(let i=0;i<14;i++){
-    const hi=i%hubs.length, ang=Math.random()*Math.PI*2, dist=0.055+Math.random()*0.09;
-    const x=hubs[hi].hx+Math.cos(ang)*dist, y=hubs[hi].hy+Math.sin(ang)*dist;
-    nodes.push({id:'a'+i,x,y,ox:x,oy:y,r:2.6+Math.random()*1.4,color:amColors[i%3],hub:false,label:'',vx:(Math.random()-.5)*0.0001,vy:(Math.random()-.5)*0.0001});
-    edges.push({a:hi,b:nodes.length-1,w:0.45+Math.random()*0.55});
+  nodes.push({tier:'tnt',label:'Vùng TNT',x:0.5,y:0.09,ox:0.5,oy:0.09,r:13,color:'#FF8A00',vx:0,vy:0});
+  const khoIdx={};
+  KHO_DEF.forEach(k=>{
+    khoIdx[k.id]=nodes.length;
+    nodes.push({tier:'kho',label:k.label,x:k.x,y:k.y,ox:k.x,oy:k.y,r:7,color:k.color,vx:0,vy:0});
+    edges.push({a:0,b:nodes.length-1,w:0.85,tier:'tk'});
+  });
+  function layoutCluster(items,wx,wy,spread,yBase,hubIdx,edgeTier){
+    const n=items.length, cols=Math.ceil(Math.sqrt(n*1.2)), rows=Math.ceil(n/cols);
+    const x0=wx-spread/2, y0=yBase||wy+0.10, cellW=spread/Math.max(cols,1), cellH=0.36/Math.max(rows,1);
+    items.forEach((item,i)=>{
+      const row=Math.floor(i/cols), col=i%cols;
+      const ox=Math.min(0.96,Math.max(0.03,x0+(col+0.5)*cellW+(Math.random()-0.5)*0.008));
+      const oy=Math.min(0.96,Math.max(0.32,y0+row*cellH+(Math.random()-0.5)*0.008));
+      const ni=nodes.length;
+      const shortLabel=item.name.length>14?item.name.slice(0,13)+'…':item.name;
+      nodes.push({tier:'bc',label:item.name,shortLabel,grp:item.grp,x:ox,y:oy,ox,oy,r:2.4+Math.random()*0.5,color:GRP_COLORS[item.grp]||'#71717a',vx:(Math.random()-.5)*0.00004,vy:(Math.random()-.5)*0.00004});
+      edges.push({a:hubIdx,b:ni,w:edgeTier==='bt'?0.55:0.4,tier:edgeTier});
+    });
   }
-  for(let i=0;i<36;i++){
-    const x=0.18+Math.random()*0.58, y=0.20+Math.random()*0.58;
-    nodes.push({id:'k'+i,x,y,ox:x,oy:y,r:1.6+Math.random()*1.3,color:'#52525b',hub:false,label:'',vx:(Math.random()-.5)*0.00014,vy:(Math.random()-.5)*0.00014});
-    let best=-1,bd=0.012;
-    for(let j=0;j<nodes.length-1;j++){const dx=nodes[j].x-x,dy=nodes[j].y-y,d=dx*dx+dy*dy;if(d<bd){bd=d;best=j;}}
-    if(best>=0&&Math.random()>0.3) edges.push({a:best,b:nodes.length-1,w:0.2+Math.random()*0.35});
-  }
-  [[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,5],[2,5]].forEach(([a,b])=>edges.push({a,b,w:0.32}));
+  KHO_DEF.forEach(k=>{
+    const ki=khoIdx[k.id], spread=k.id==='khoHB'?0.24:k.id==='khoPT'?0.34:0.30;
+    const items=[];
+    BC_RAW.forEach(([grp,names])=>{if(k.groups.indexOf(grp)<0) return; names.forEach(name=>items.push({grp,name}));});
+    layoutCluster(items,k.x,k.y,spread,k.y+0.10,ki,'kb');
+  });
+  DIRECT_GRPS.forEach(grp=>{
+    const pos=DIRECT_POS[grp], names=(BC_RAW.find(x=>x[0]===grp)||[])[1]||[];
+    const items=names.map(name=>({grp,name}));
+    layoutCluster(items,pos.x,pos.y,pos.spread,pos.yBase,0,'bt');
+  });
   function resize(){
     dpr=Math.min(window.devicePixelRatio||1,2); W=parent.clientWidth; H=parent.clientHeight;
     canvas.width=Math.floor(W*dpr); canvas.height=Math.floor(H*dpr);
@@ -4891,41 +4999,62 @@ function initObsidianLoginGraph(){
   function tick(){
     const t=Date.now();
     nodes.forEach(n=>{
-      if(n.hub){n.x=n.ox+Math.sin(t*0.00022+n.ox*12)*0.0035;n.y=n.oy+Math.cos(t*0.00018+n.oy*12)*0.0035;return;}
-      n.x+=n.vx;n.y+=n.vy;n.vx+=(n.ox-n.x)*0.0009;n.vy+=(n.oy-n.y)*0.0009;n.vx*=0.991;n.vy*=0.991;
-      const m=0.07;
-      if(n.x<m){n.x=m;n.vx*=-0.4;} if(n.x>1-m){n.x=1-m;n.vx*=-0.4;}
-      if(n.y<m){n.y=m;n.vy*=-0.4;} if(n.y>1-m){n.y=1-m;n.vy*=-0.4;}
+      if(n.tier==='tnt'||n.tier==='kho'){
+        n.x=n.ox+Math.sin(t*0.0002+n.ox*10)*0.0025;
+        n.y=n.oy+Math.cos(t*0.00017+n.oy*10)*0.0025;
+        return;
+      }
+      n.x+=n.vx; n.y+=n.vy;
+      n.vx+=(n.ox-n.x)*0.0012; n.vy+=(n.oy-n.y)*0.0012;
+      n.vx*=0.988; n.vy*=0.988;
     });
   }
   function draw(){
     ctx.fillStyle='#1a1a1e'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='rgba(255,255,255,0.035)';
-    const step=26;
-    for(let x=step;x<W;x+=step) for(let y=step;y<H;y+=step){ctx.beginPath();ctx.arc(x,y,0.55,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='rgba(255,255,255,0.03)';
+    const step=24;
+    for(let x=step;x<W;x+=step) for(let y=step;y<H;y+=step){ctx.beginPath();ctx.arc(x,y,0.5,0,Math.PI*2);ctx.fill();}
     edges.forEach(e=>{
       const A=nodes[e.a],B=nodes[e.b]; if(!A||!B) return;
-      const x1=A.x*W,y1=A.y*H,x2=B.x*W,y2=B.y*H, dist=Math.hypot(x2-x1,y2-y1);
-      const alpha=Math.max(0.035,Math.min(0.13,0.2-dist/W*0.12))*e.w;
-      ctx.strokeStyle='rgba(161,161,170,'+alpha+')'; ctx.lineWidth=0.55;
+      const x1=A.x*W,y1=A.y*H,x2=B.x*W,y2=B.y*H;
+      let alpha=0.08, color='rgba(161,161,170,';
+      if(e.tier==='tk'){ alpha=0.24; color='rgba(255,138,0,'; }
+      else if(e.tier==='bt'){ alpha=0.14; color='rgba(167,139,250,'; }
+      ctx.strokeStyle=color+alpha+')';
+      ctx.lineWidth=e.tier==='tk'?1.2:e.tier==='bt'?0.65:0.4;
       ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
     });
     nodes.forEach(n=>{
       const x=n.x*W,y=n.y*H;
-      if(n.hub){ctx.fillStyle=n.color;ctx.globalAlpha=0.12;ctx.beginPath();ctx.arc(x,y,n.r*3.2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
-      ctx.fillStyle=n.color; ctx.globalAlpha=n.hub?0.92:0.5;
-      ctx.beginPath();ctx.arc(x,y,n.r,0,Math.PI*2);ctx.fill(); ctx.globalAlpha=1;
-      if(n.hub&&n.label){ctx.fillStyle='rgba(228,228,231,0.7)';ctx.font='600 10px Inter,system-ui,sans-serif';ctx.textAlign='center';ctx.fillText(n.label,x,y-n.r-5);}
+      if(n.tier==='tnt'){
+        ctx.fillStyle=n.color;ctx.globalAlpha=0.18;ctx.beginPath();ctx.arc(x,y,n.r*2.8,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      } else if(n.tier==='kho'){
+        ctx.fillStyle=n.color;ctx.globalAlpha=0.14;ctx.beginPath();ctx.arc(x,y,n.r*2.4,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      }
+      ctx.fillStyle=n.color;
+      ctx.globalAlpha=n.tier==='bc'?0.7:n.tier==='tnt'?1:0.9;
+      ctx.beginPath();ctx.arc(x,y,n.r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+      if(n.label){
+        ctx.fillStyle=n.tier==='tnt'?'rgba(255,200,120,0.95)':n.tier==='kho'?'rgba(228,228,231,0.8)':'rgba(161,161,170,0.85)';
+        const fs=n.tier==='tnt'?12:n.tier==='kho'?8:6.5;
+        ctx.font=(n.tier==='tnt'?'700 ':n.tier==='kho'?'600 ':'500 ')+fs+'px Inter,system-ui,sans-serif';
+        ctx.textAlign='center';
+        const txt=n.tier==='bc'?(n.shortLabel||n.label):n.label;
+        ctx.fillText(txt,x,y+n.r+(n.tier==='bc'?7:fs+2));
+      }
     });
-    const g=ctx.createRadialGradient(W*0.5,H*0.45,Math.min(W,H)*0.15,W*0.5,H*0.5,Math.max(W,H)*0.72);
-    g.addColorStop(0,'rgba(26,26,30,0)'); g.addColorStop(1,'rgba(26,26,30,0.5)');
+    const g=ctx.createRadialGradient(W*0.5,H*0.35,Math.min(W,H)*0.1,W*0.5,H*0.55,Math.max(W,H)*0.65);
+    g.addColorStop(0,'rgba(26,26,30,0)'); g.addColorStop(1,'rgba(26,26,30,0.35)');
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   }
   function frame(){tick();draw();raf=requestAnimationFrame(frame);}
   resize();frame();
   new ResizeObserver(()=>resize()).observe(parent);
 }
-window.addEventListener('load',initObsidianLoginGraph);
+window.addEventListener('load',function(){
+  initObsidianLoginGraph();
+  initAppClockAndQuotes();
+});
 window.addEventListener('resize', _attachScrollHints);
 window.addEventListener('load', _attachScrollHints);
 setInterval(_attachScrollHints, 1200);
