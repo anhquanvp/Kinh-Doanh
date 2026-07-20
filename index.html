@@ -188,74 +188,59 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
 .modal-ft .btn{padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text-main)}
 .modal-ft .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 
-/* —— Premium login (mockup-matched) —— */
-#loginOverlay{position:fixed;inset:0;z-index:9999;display:flex;background:#070B16;overflow:hidden;font-family:'Inter',system-ui,sans-serif}
+/* —— Premium login · Obsidian graph —— */
+#loginOverlay{position:fixed;inset:0;z-index:9999;display:flex;background:#1a1a1e;overflow:hidden;font-family:'Inter',system-ui,sans-serif}
 .login-split{display:flex;width:100%;height:100%;min-height:100vh}
-.login-visual{flex:0 0 62%;position:relative;overflow:hidden;background:#070B16;padding:28px 28px 20px;display:flex;flex-direction:column}
-.login-visual-bg{position:absolute;inset:0;background:
-  radial-gradient(ellipse 90% 70% at 35% 40%,rgba(37,99,235,.35),transparent 55%),
-  radial-gradient(ellipse 60% 50% at 75% 70%,rgba(124,58,237,.28),transparent 50%),
-  radial-gradient(ellipse 40% 35% at 60% 20%,rgba(56,189,248,.2),transparent 55%),
-  linear-gradient(165deg,#050814 0%,#0B1224 45%,#0F172A 100%);pointer-events:none}
-.login-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(56,189,248,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.05) 1px,transparent 1px);background-size:40px 40px;opacity:.4;pointer-events:none;mask-image:radial-gradient(ellipse at 40% 45%,#000 10%,transparent 70%)}
-.lv-head{position:relative;z-index:2;display:flex;align-items:center;gap:12px;margin-bottom:18px}
-.lv-head .cube{width:36px;height:36px;border-radius:10px;background:linear-gradient(145deg,#F97316,#EA580C);box-shadow:0 8px 24px rgba(249,115,22,.45),inset 0 1px 0 rgba(255,255,255,.35);display:grid;place-items:center;color:#fff;font-weight:900;font-size:11px;letter-spacing:-.5px}
-.lv-head .ht{color:#fff;font-size:15px;font-weight:800;letter-spacing:-.3px}
-.lv-head .hs{color:rgba(255,255,255,.45);font-size:11px;font-weight:500;margin-top:2px}
-.lv-provinces{position:relative;z-index:2;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px}
-.lv-prov-chip{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:9px 8px;text-align:center;font-size:11px;font-weight:700;color:#fff;letter-spacing:-.1px;backdrop-filter:blur(12px)}
-.lv-prov-chip span{display:block;font-size:9px;font-weight:500;color:rgba(255,255,255,.45);margin-top:2px}
-.lv-map-main{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;min-height:0}
-.lv-map-main .lv-glass{flex:1;display:flex;flex-direction:column;padding:16px 18px}
-.lv-map-wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;min-height:280px}
-.lv-map-wrap svg.tnt-map{width:min(520px,95%);height:auto;max-height:100%;filter:drop-shadow(0 0 32px rgba(56,189,248,.25))}
-.lv-map-wrap .prov-path{stroke:#fff;stroke-width:1.8;stroke-linejoin:round;transition:fill-opacity .2s,filter .2s;cursor:default}
-.lv-map-wrap .prov-path:hover{fill-opacity:.95;filter:brightness(1.08)}
-.lv-map-wrap .prov-label{fill:#fff;font-size:12px;font-weight:800;font-family:'Inter',system-ui,sans-serif;pointer-events:none;text-shadow:0 1px 6px rgba(0,0,0,.5)}
-.lv-map-note{font-size:10px;color:rgba(255,255,255,.4);text-align:center;margin-top:10px;font-weight:500}
-.lv-features{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
-.lv-features .dock-item{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:11px;font-weight:600;color:rgba(255,255,255,.55)}
-.lv-features .dock-item svg{width:15px;height:15px;stroke:#38BDF8;fill:none;stroke-width:2;flex-shrink:0;opacity:.7}
+.login-visual{flex:0 0 62%;position:relative;overflow:hidden;background:#1a1a1e;padding:28px 28px 20px;display:flex;flex-direction:column}
+.obsidian-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.lv-overlay{position:relative;z-index:2;display:flex;flex-direction:column;height:100%;pointer-events:none}
+.lv-head{display:flex;align-items:center;gap:12px;margin-bottom:auto;padding-top:4px}
+.lv-head .cube{width:34px;height:34px;border-radius:8px;background:linear-gradient(145deg,#7c3aed,#5b21b6);box-shadow:0 0 20px rgba(124,58,237,.35);display:grid;place-items:center;color:#fff;font-weight:800;font-size:10px;letter-spacing:-.4px}
+.lv-head .ht{color:#e4e4e7;font-size:14px;font-weight:700;letter-spacing:-.2px}
+.lv-head .hs{color:#71717a;font-size:11px;font-weight:500;margin-top:2px}
+.lv-graph-caption{margin-top:auto;padding:20px 4px 8px}
+.lv-graph-caption .gc-title{font-size:13px;font-weight:600;color:#a1a1aa;letter-spacing:.02em}
+.lv-graph-caption .gc-sub{font-size:11px;color:#52525b;margin-top:6px;line-height:1.5;max-width:420px}
+.lv-graph-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.lv-legend-chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:600;color:#71717a;padding:5px 10px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+.lv-legend-chip i{width:7px;height:7px;border-radius:50%;flex-shrink:0;box-shadow:0 0 8px currentColor}
+.lv-features{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.lv-features .dock-item{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:10px;font-weight:600;color:#52525b}
+.lv-features .dock-item svg{width:14px;height:14px;stroke:#7c3aed;fill:none;stroke-width:2;flex-shrink:0;opacity:.65}
 
-.login-panel{flex:0 0 38%;display:flex;align-items:center;justify-content:center;padding:36px 28px;position:relative;background:linear-gradient(180deg,#080D1C 0%,#0B1224 50%,#0F172A 100%)}
-.login-panel::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 80% 15%,rgba(37,99,235,.18),transparent 45%),radial-gradient(ellipse at 20% 90%,rgba(124,58,237,.12),transparent 40%);pointer-events:none}
-.login-card{position:relative;width:min(400px,100%);padding:40px 34px 30px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:0 28px 90px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.12)}
+.login-panel{flex:0 0 38%;display:flex;align-items:center;justify-content:center;padding:36px 28px;position:relative;background:#1a1a1e;border-left:1px solid rgba(255,255,255,.06)}
+.login-panel::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(124,58,237,.08),transparent 60%);pointer-events:none}
+.login-card{position:relative;width:min(400px,100%);padding:38px 32px 28px;border-radius:20px;background:rgba(30,30,34,.85);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 24px 64px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
 .lc-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
-.lc-cube{width:44px;height:44px;border-radius:12px;background:linear-gradient(145deg,#FB923C,#EA580C 55%,#C2410C);box-shadow:0 10px 28px rgba(234,88,12,.5),inset 0 1px 0 rgba(255,255,255,.4);position:relative;transform:perspective(80px) rotateX(8deg) rotateY(-8deg)}
-.lc-cube::after{content:'';position:absolute;inset:8px;border:1.5px solid rgba(255,255,255,.35);border-radius:6px}
-.lc-brand-name{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.6px}
-.login-card h1{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.6px;margin-bottom:10px;line-height:1.2}
-.login-card h1 .accent{color:#38BDF8}
-.login-card .lc-sub{font-size:13px;color:rgba(255,255,255,.55);line-height:1.55;margin-bottom:26px}
-.login-btns{display:flex;flex-direction:column;gap:11px}
-.login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px 16px;border-radius:12px;font-size:13.5px;font-weight:650;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s;border:1px solid transparent;font-family:inherit}
+.lc-cube{width:40px;height:40px;border-radius:10px;background:linear-gradient(145deg,#8b5cf6,#6d28d9);box-shadow:0 0 24px rgba(124,58,237,.4);position:relative}
+.lc-cube::after{content:'';position:absolute;inset:7px;border:1.5px solid rgba(255,255,255,.25);border-radius:5px}
+.lc-brand-name{font-size:20px;font-weight:800;color:#fafafa;letter-spacing:-.5px}
+.login-card h1{font-size:24px;font-weight:800;color:#fafafa;letter-spacing:-.5px;margin-bottom:10px;line-height:1.25}
+.login-card h1 .accent{color:#a78bfa}
+.login-card .lc-sub{font-size:13px;color:#71717a;line-height:1.55;margin-bottom:26px}
+.login-btns{display:flex;flex-direction:column;gap:10px}
+.login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s,border-color .15s;border:1px solid transparent;font-family:inherit}
 .login-btn:hover{transform:translateY(-1px)}
-.login-btn.google{background:#fff;color:#1E293B;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-.login-btn.google:hover{background:#F8FAFC;box-shadow:0 10px 28px rgba(0,0,0,.3)}
-.login-btn.ms{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.14)}
-.login-btn.ms:hover{background:rgba(255,255,255,.14)}
-.login-btn.outline{background:transparent;color:rgba(255,255,255,.88);border-color:rgba(255,255,255,.22)}
-.login-btn.outline:hover{background:rgba(255,255,255,.06)}
+.login-btn.google{background:#fafafa;color:#18181b;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.login-btn.google:hover{background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.login-btn.ms{background:rgba(255,255,255,.05);color:#e4e4e7;border-color:rgba(255,255,255,.1)}
+.login-btn.ms:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14)}
+.login-btn.outline{background:transparent;color:#a1a1aa;border-color:rgba(255,255,255,.12)}
+.login-btn.outline:hover{background:rgba(255,255,255,.04);color:#e4e4e7}
 .login-btn svg{width:18px;height:18px;flex-shrink:0}
-.login-or{display:flex;align-items:center;gap:12px;margin:4px 0;color:rgba(255,255,255,.35);font-size:11px;font-weight:700;letter-spacing:.8px}
-.login-or::before,.login-or::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.12)}
-.login-card .lc-err{display:none;margin-top:14px;color:#FCA5A5;font-size:12.5px;font-weight:600;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.35);padding:10px 14px;border-radius:10px;text-align:center;line-height:1.45}
-.lc-secure{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:22px;font-size:11px;color:rgba(255,255,255,.4);font-weight:500}
-.lc-secure svg{width:14px;height:14px;stroke:#34D399;fill:none;stroke-width:2}
-.login-card .lc-foot{margin-top:16px;text-align:center;font-size:11px;color:rgba(255,255,255,.32)}
-.login-card .lc-foot b{color:rgba(255,255,255,.5);font-weight:600}
+.login-or{display:flex;align-items:center;gap:12px;margin:2px 0;color:#3f3f46;font-size:10px;font-weight:700;letter-spacing:.6px}
+.login-or::before,.login-or::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+.login-card .lc-err{display:none;margin-top:14px;color:#fca5a5;font-size:12px;font-weight:600;background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.25);padding:10px 14px;border-radius:8px;text-align:center;line-height:1.45}
+.lc-secure{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:20px;font-size:11px;color:#52525b;font-weight:500}
+.lc-secure svg{width:14px;height:14px;stroke:#6ee7b7;fill:none;stroke-width:2}
+.login-card .lc-foot{margin-top:14px;text-align:center;font-size:10px;color:#3f3f46}
+.login-card .lc-foot b{color:#52525b;font-weight:600}
 #gsiButtonContainer{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
-.lv-glass{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;backdrop-filter:blur(18px);box-shadow:0 12px 40px rgba(0,0,0,.3);overflow:hidden;position:relative}
-.lv-glass .g-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.55);margin-bottom:10px;letter-spacing:.2px}
-@media(max-width:1100px){
-  .lv-provinces{grid-template-columns:repeat(3,1fr)}
-  .lv-map-wrap{min-height:220px}
-}
 @media(max-width:960px){
   .login-split{flex-direction:column}
-  .login-visual{flex:none;max-height:48vh;padding:16px}
+  .login-visual{flex:none;min-height:42vh;padding:16px}
   .lv-features{display:none}
-  .login-panel{flex:1;padding:20px 16px 32px}
+  .login-panel{flex:1;padding:20px 16px 32px;border-left:none;border-top:1px solid rgba(255,255,255,.06)}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -266,51 +251,27 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:8px 12px;font-size:12p
 <div id="loginOverlay">
   <div class="login-split">
     <div class="login-visual" aria-hidden="true">
-      <div class="login-visual-bg"></div>
-      <div class="login-grid"></div>
-      <div class="lv-head">
-        <div class="cube">GHN</div>
-        <div><div class="ht">GHN Digital</div><div class="hs">Vùng TNT · Revenue Analytics Platform</div></div>
-      </div>
-      <div class="lv-provinces">
-        <div class="lv-prov-chip" style="border-color:rgba(255,138,86,.35)">Phú Thọ<span>Tỉnh</span></div>
-        <div class="lv-prov-chip" style="border-color:rgba(251,191,36,.35)">Vĩnh Phúc<span>Tỉnh</span></div>
-        <div class="lv-prov-chip" style="border-color:rgba(52,211,153,.35)">Hòa Bình<span>Tỉnh</span></div>
-        <div class="lv-prov-chip" style="border-color:rgba(167,139,250,.35)">Hà Nam<span>Tỉnh</span></div>
-        <div class="lv-prov-chip" style="border-color:rgba(96,165,250,.35)">Nam Định<span>Tỉnh</span></div>
-        <div class="lv-prov-chip" style="border-color:rgba(56,189,248,.35)">Ninh Bình<span>Tỉnh</span></div>
-      </div>
-      <div class="lv-map-main">
-        <div class="lv-glass">
-          <div class="g-title">Bản đồ ranh giới hành chính · Vùng TNT (6 tỉnh)</div>
-          <div class="lv-map-wrap">
-            <svg class="tnt-map" viewBox="0 0 480 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bản đồ 6 tỉnh Vùng TNT">
-              <defs>
-                <filter id="tntGlow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-              </defs>
-              <rect width="480" height="340" fill="rgba(255,255,255,0.02)" rx="12"/>
-              <path class="prov-path" data-prov="Phú Thọ" d="M58,34 L150,22 L200,42 L210,84 L176,116 L116,120 L70,98 L54,58 Z" fill="#FF8A56" fill-opacity=".82" filter="url(#tntGlow)"/>
-              <text class="prov-label" x="132" y="72" text-anchor="middle">Phú Thọ</text>
-              <path class="prov-path" data-prov="Vĩnh Phúc" d="M216,46 L286,28 L338,52 L332,98 L278,120 L224,100 L210,66 Z" fill="#FBBF24" fill-opacity=".8"/>
-              <text class="prov-label" x="272" y="76" text-anchor="middle">Vĩnh Phúc</text>
-              <path class="prov-path" data-prov="Hòa Bình" d="M50,128 L140,122 L182,150 L176,212 L132,252 L80,244 L48,202 L40,160 Z" fill="#34D399" fill-opacity=".74"/>
-              <text class="prov-label" x="108" y="190" text-anchor="middle">Hòa Bình</text>
-              <path class="prov-path" data-prov="Hà Nam" d="M188,154 L262,142 L302,170 L292,210 L244,230 L196,212 L182,178 Z" fill="#A78BFA" fill-opacity=".8"/>
-              <text class="prov-label" x="240" y="188" text-anchor="middle">Hà Nam</text>
-              <path class="prov-path" data-prov="Nam Định" d="M308,172 L388,150 L446,196 L450,254 L418,300 L358,304 L312,262 L300,212 Z" fill="#60A5FA" fill-opacity=".78"/>
-              <text class="prov-label" x="376" y="232" text-anchor="middle">Nam Định</text>
-              <path class="prov-path" data-prov="Ninh Bình" d="M138,260 L222,240 L288,250 L296,298 L256,332 L190,336 L138,310 L124,282 Z" fill="#38BDF8" fill-opacity=".74"/>
-              <text class="prov-label" x="208" y="294" text-anchor="middle">Ninh Bình</text>
-            </svg>
-          </div>
-          <div class="lv-map-note">Phú Thọ · Vĩnh Phúc · Hòa Bình · Hà Nam · Nam Định · Ninh Bình — Đăng nhập để xem báo cáo doanh thu thực tế</div>
+      <canvas id="obsidianGraph" class="obsidian-canvas"></canvas>
+      <div class="lv-overlay">
+        <div class="lv-head">
+          <div class="cube">GHN</div>
+          <div><div class="ht">GHN Digital</div><div class="hs">Vùng TNT · Revenue Analytics</div></div>
         </div>
-      </div>
-      <div class="lv-features">
-        <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/></svg>Báo cáo DT</div>
-        <div class="dock-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Theo thời gian thực</div>
-        <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/></svg>Bảo mật GHN</div>
-        <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.9-1A3.5 3.5 0 0 1 18 16H7z"/></svg>Cloud</div>
+        <div class="lv-graph-caption">
+          <div class="gc-title">Knowledge graph · 6 tỉnh Vùng TNT</div>
+          <div class="gc-sub">Mỗi nút đại diện tỉnh, AM hoặc nhóm KH — kết nối mô phỏng mạng lưới báo cáo doanh thu.</div>
+          <div class="lv-graph-legend">
+            <span class="lv-legend-chip"><i style="background:#a78bfa;color:#a78bfa"></i>Tỉnh</span>
+            <span class="lv-legend-chip"><i style="background:#7c3aed;color:#7c3aed"></i>AM</span>
+            <span class="lv-legend-chip"><i style="background:#52525b;color:#52525b"></i>Nhóm KH</span>
+          </div>
+        </div>
+        <div class="lv-features">
+          <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/></svg>Báo cáo DT</div>
+          <div class="dock-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Thời gian thực</div>
+          <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z"/></svg>Bảo mật GHN</div>
+          <div class="dock-item"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.9-1A3.5 3.5 0 0 1 18 16H7z"/></svg>Cloud</div>
+        </div>
       </div>
     </div>
     <div class="login-panel">
@@ -4890,6 +4851,81 @@ function _attachScrollHints(){
     }
   });
 }
+function initObsidianLoginGraph(){
+  const canvas=document.getElementById('obsidianGraph');
+  if(!canvas) return;
+  const parent=canvas.parentElement;
+  const ctx=canvas.getContext('2d');
+  let W=0,H=0,dpr=1,raf=0;
+  const hubs=[
+    {label:'Phú Thọ',color:'#a78bfa',hx:0.30,hy:0.34},
+    {label:'Vĩnh Phúc',color:'#c4b5fd',hx:0.50,hy:0.26},
+    {label:'Hòa Bình',color:'#8b5cf6',hx:0.22,hy:0.54},
+    {label:'Hà Nam',color:'#a78bfa',hx:0.42,hy:0.50},
+    {label:'Nam Định',color:'#7c3aed',hx:0.62,hy:0.52},
+    {label:'Ninh Bình',color:'#9333ea',hx:0.36,hy:0.68}
+  ];
+  const nodes=[], edges=[];
+  hubs.forEach((h,i)=>{nodes.push({id:'h'+i,x:h.hx,y:h.hy,ox:h.hx,oy:h.hy,r:5.5,color:h.color,label:h.label,hub:true,vx:0,vy:0});});
+  const amColors=['#7c3aed','#6d28d9','#8b5cf6'];
+  for(let i=0;i<14;i++){
+    const hi=i%hubs.length, ang=Math.random()*Math.PI*2, dist=0.055+Math.random()*0.09;
+    const x=hubs[hi].hx+Math.cos(ang)*dist, y=hubs[hi].hy+Math.sin(ang)*dist;
+    nodes.push({id:'a'+i,x,y,ox:x,oy:y,r:2.6+Math.random()*1.4,color:amColors[i%3],hub:false,label:'',vx:(Math.random()-.5)*0.0001,vy:(Math.random()-.5)*0.0001});
+    edges.push({a:hi,b:nodes.length-1,w:0.45+Math.random()*0.55});
+  }
+  for(let i=0;i<36;i++){
+    const x=0.18+Math.random()*0.58, y=0.20+Math.random()*0.58;
+    nodes.push({id:'k'+i,x,y,ox:x,oy:y,r:1.6+Math.random()*1.3,color:'#52525b',hub:false,label:'',vx:(Math.random()-.5)*0.00014,vy:(Math.random()-.5)*0.00014});
+    let best=-1,bd=0.012;
+    for(let j=0;j<nodes.length-1;j++){const dx=nodes[j].x-x,dy=nodes[j].y-y,d=dx*dx+dy*dy;if(d<bd){bd=d;best=j;}}
+    if(best>=0&&Math.random()>0.3) edges.push({a:best,b:nodes.length-1,w:0.2+Math.random()*0.35});
+  }
+  [[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,5],[2,5]].forEach(([a,b])=>edges.push({a,b,w:0.32}));
+  function resize(){
+    dpr=Math.min(window.devicePixelRatio||1,2); W=parent.clientWidth; H=parent.clientHeight;
+    canvas.width=Math.floor(W*dpr); canvas.height=Math.floor(H*dpr);
+    canvas.style.width=W+'px'; canvas.style.height=H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function tick(){
+    const t=Date.now();
+    nodes.forEach(n=>{
+      if(n.hub){n.x=n.ox+Math.sin(t*0.00022+n.ox*12)*0.0035;n.y=n.oy+Math.cos(t*0.00018+n.oy*12)*0.0035;return;}
+      n.x+=n.vx;n.y+=n.vy;n.vx+=(n.ox-n.x)*0.0009;n.vy+=(n.oy-n.y)*0.0009;n.vx*=0.991;n.vy*=0.991;
+      const m=0.07;
+      if(n.x<m){n.x=m;n.vx*=-0.4;} if(n.x>1-m){n.x=1-m;n.vx*=-0.4;}
+      if(n.y<m){n.y=m;n.vy*=-0.4;} if(n.y>1-m){n.y=1-m;n.vy*=-0.4;}
+    });
+  }
+  function draw(){
+    ctx.fillStyle='#1a1a1e'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(255,255,255,0.035)';
+    const step=26;
+    for(let x=step;x<W;x+=step) for(let y=step;y<H;y+=step){ctx.beginPath();ctx.arc(x,y,0.55,0,Math.PI*2);ctx.fill();}
+    edges.forEach(e=>{
+      const A=nodes[e.a],B=nodes[e.b]; if(!A||!B) return;
+      const x1=A.x*W,y1=A.y*H,x2=B.x*W,y2=B.y*H, dist=Math.hypot(x2-x1,y2-y1);
+      const alpha=Math.max(0.035,Math.min(0.13,0.2-dist/W*0.12))*e.w;
+      ctx.strokeStyle='rgba(161,161,170,'+alpha+')'; ctx.lineWidth=0.55;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    });
+    nodes.forEach(n=>{
+      const x=n.x*W,y=n.y*H;
+      if(n.hub){ctx.fillStyle=n.color;ctx.globalAlpha=0.12;ctx.beginPath();ctx.arc(x,y,n.r*3.2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
+      ctx.fillStyle=n.color; ctx.globalAlpha=n.hub?0.92:0.5;
+      ctx.beginPath();ctx.arc(x,y,n.r,0,Math.PI*2);ctx.fill(); ctx.globalAlpha=1;
+      if(n.hub&&n.label){ctx.fillStyle='rgba(228,228,231,0.7)';ctx.font='600 10px Inter,system-ui,sans-serif';ctx.textAlign='center';ctx.fillText(n.label,x,y-n.r-5);}
+    });
+    const g=ctx.createRadialGradient(W*0.5,H*0.45,Math.min(W,H)*0.15,W*0.5,H*0.5,Math.max(W,H)*0.72);
+    g.addColorStop(0,'rgba(26,26,30,0)'); g.addColorStop(1,'rgba(26,26,30,0.5)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+  function frame(){tick();draw();raf=requestAnimationFrame(frame);}
+  resize();frame();
+  new ResizeObserver(()=>resize()).observe(parent);
+}
+window.addEventListener('load',initObsidianLoginGraph);
 window.addEventListener('resize', _attachScrollHints);
 window.addEventListener('load', _attachScrollHints);
 setInterval(_attachScrollHints, 1200);
