@@ -707,9 +707,8 @@ function parseKhNhomAWeekly(khNhomA, thang, monthProgress, dtNgay){
       if(mk&&thangEq(mk,thang)) monthCust.add(c.ma);
     });
   });
-  // Tổng = toàn bộ KH trên sheet nhóm A; phân tích cảnh báo trên KH có DT tháng hiện tại (hoặc toàn sheet nếu chưa có)
-  const allKeys=Object.keys(byCustAll);
-  const custKeys=monthCust.size?monthCust:new Set(allKeys);
+  // Phân tích trên KH có DT tháng hiện tại (hoặc toàn sheet nếu chưa có)
+  const custKeys=monthCust.size?monthCust:new Set(Object.keys(byCustAll));
 
   const weekCur=isoWeekFromIsoDate(dayCur).key;
   const weekPrev=isoWeekFromIsoDate(dayPrev).key;
@@ -783,7 +782,9 @@ function parseKhNhomAWeekly(khNhomA, thang, monthProgress, dtNgay){
   return {
     weekCur,weekPrev,dayCur,dayPrev,weekday:weekdayVi(dayCur),
     last5,last7,elapsed,totalDays,
-    weeks:[weekPrev,weekCur],total:allKeys.length||rows.length,
+    weeks:[weekPrev,weekCur],
+    // Tổng đầu tháng = số KH lên đơn trong tháng (không đếm toàn bộ sheet)
+    total:coDonMonth,
     coDon:coDonMonth,coDonWeekCur,coDonWeekPrev,
     giamHang,giamHangPrev,nguyCo,nguyCoPrev,
     alertRows,churnRows,giamDonRows,
@@ -1336,6 +1337,33 @@ function buildBanMoiKhoTrend(banmoi, thang, elapsed, totalDays, flt){
     thangPrevLabel:formatThangLabel(thangPrev||''),
     note:parsed.note
   };
+}
+/** Gom Banmoi theo tuần ISO → cấu trúc tương thích buildAmBanMoiWeekRank (byAmG). */
+function buildBanMoiByWeek(banmoi){
+  const {recs}=parseBanMoiSheet(banmoi);
+  const byWeek={};
+  recs.forEach(r=>{
+    const wk=r.tuan;
+    if(!wk) return;
+    const key=Object.keys(byWeek).find(k=>sameWeekKey(k,wk))||wk;
+    if(!byWeek[key]) byWeek[key]={dtBanMoi:0,volG:0,khG:new Set(),days:new Set(),byAmG:{}};
+    byWeek[key].dtBanMoi+=(r.dt||0);
+    byWeek[key].volG+=1; // mỗi dòng KHM hợp lệ = 1 đơn
+    if(r.iso) byWeek[key].days.add(r.iso);
+    if(r.ma&&r.ma!=='—') byWeek[key].khG.add(r.ma);
+    const am=(r.am||'').trim()||'—';
+    if(!byWeek[key].byAmG[am]) byWeek[key].byAmG[am]={dt:0,vol:0,kh:new Set()};
+    byWeek[key].byAmG[am].dt+=(r.dt||0);
+    byWeek[key].byAmG[am].vol+=1;
+    if(r.ma&&r.ma!=='—') byWeek[key].byAmG[am].kh.add(r.ma);
+  });
+  return byWeek;
+}
+function pickBanMoiWeek(byWeek, weekKey){
+  if(!byWeek||!weekKey) return null;
+  if(byWeek[weekKey]) return byWeek[weekKey];
+  const k=Object.keys(byWeek).find(x=>sameWeekKey(x,weekKey));
+  return k?byWeek[k]:null;
 }
 /** Tổng DT KHM trong tháng (cùng kỳ N ngày đầu) từ Banmoi — đã lọc cửa sổ 30 ngày. */
 function sumBanMoiKhmCungKy(banmoi, thang, elapsedDays){
@@ -4424,23 +4452,23 @@ function buildWeeklyReportNarratives(d){
     .filter(Boolean).join(' ')||'Chưa có tín hiệu giảm mạnh tập trung; tiếp tục theo dõi sát tuần tới.';
   const mtdBanGNar=d.mtdBanMoiCungKy||d.mtdBanMoi||0;
   const prevBanGNar=d.prevBanMoiCungKy||0;
-  const nhanDinhBanMoi=`Tuần ${wk}: <b>${fmt(d.slkhG)}</b> KH bán mới (nhóm G), volume <b>${fmt(d.volG)}</b> đơn (TB ~${fmt(d.slkhAvgG||(d.slkhG?Math.round((d.volG||0)/d.slkhG):0))} đơn/KH). Nhóm G cùng kỳ ${d.elapsed} ngày: <b>${fmtVnd(mtdBanGNar)}</b> vs ${d.thangPrevLabel||'T-1'} <b>${fmtVnd(prevBanGNar)}</b> (${fmtMomPct(mtdBanGNar, prevBanGNar)}).${(d.topAmBanMoi||[]).length?` AM nổi bật: ${d.topAmBanMoi.slice(0,3).map(x=>{ const r=Array.isArray(x)?(x[2]||{am:x[0],dt:x[1]}):x; return `${r.am} (${fmtVnd(r.dt||0)}${r.kh?`, ${fmt(r.kh)} KH`:''})`; }).join(', ')}.`:' '}`;
+  const nhanDinhBanMoi=`Tuần ${wk}: <b>${fmt(d.slkhG)}</b> KH bán mới (Banmoi/KHM), volume <b>${fmt(d.volG)}</b> đơn (TB ~${fmt(d.slkhAvgG||(d.slkhG?Math.round((d.volG||0)/d.slkhG):0))} đơn/KH). DT bán mới cùng kỳ ${d.elapsed} ngày: <b>${fmtVnd(mtdBanGNar)}</b> vs ${d.thangPrevLabel||'T-1'} <b>${fmtVnd(prevBanGNar)}</b> (${fmtMomPct(mtdBanGNar, prevBanGNar)}).${(d.topAmBanMoi||[]).length?` AM nổi bật: ${d.topAmBanMoi.slice(0,3).map(x=>{ const r=Array.isArray(x)?(x[2]||{am:x[0],dt:x[1]}):x; return `${r.am} (${fmtVnd(r.dt||0)}${r.kh?`, ${fmt(r.kh)} KH`:''})`; }).join(', ')}.`:' '}`;
   const banMoiMomNum=parseFloat(String(fmtMomPct(mtdBanGNar, prevBanGNar)||'').replace(/[^0-9.\-+]/g,''));
   const amYeuTxt=(d.topAmBanMoiYeu||[]).length
-    ? `AM nhóm G yếu tuần ${wk}: ${(d.topAmBanMoiYeu||[]).slice(0,3).map(r=>`${r.am} (${fmtMomPct(r.dt,r.dtPrev)}, ${fmt(r.kh)} KH)`).join('; ')}.`
+    ? `AM bán mới yếu tuần ${wk}: ${(d.topAmBanMoiYeu||[]).slice(0,3).map(r=>`${r.am} (${fmtMomPct(r.dt,r.dtPrev)}, ${fmt(r.kh)} KH)`).join('; ')}.`
     : '';
   const vanDeBanMoi=!d.slkhG&&!mtdBanGNar
     ?'Chưa có KH bán mới phát sinh — cần rà soát pipeline, nguồn shop và hỗ trợ AM khu vực.'
     :!isNaN(banMoiMomNum)&&banMoiMomNum<-5
-    ?`DT bán mới nhóm G cùng kỳ giảm ${fmtMomPct(mtdBanGNar, prevBanGNar)} vs ${d.thangPrevLabel||'T-1'} (${fmtVnd(mtdBanGNar)} vs ${fmtVnd(prevBanGNar)}). ${amYeuTxt||'Cần tăng cường prospecting, onboarding KH mới và hỗ trợ AM khu vực yếu.'}`
-    :`Tiến độ bán mới nhóm G cùng kỳ ${fmtMomPct(mtdBanGNar, prevBanGNar)} vs ${d.thangPrevLabel||'T-1'} (${fmtVnd(mtdBanGNar)} vs ${fmtVnd(prevBanGNar)}). ${amYeuTxt||'Duy trì và nhân rộng mô hình từ AM top.'}`;
+    ?`DT bán mới (Banmoi) cùng kỳ giảm ${fmtMomPct(mtdBanGNar, prevBanGNar)} vs ${d.thangPrevLabel||'T-1'} (${fmtVnd(mtdBanGNar)} vs ${fmtVnd(prevBanGNar)}). ${amYeuTxt||'Cần tăng cường prospecting, onboarding KH mới và hỗ trợ AM khu vực yếu.'}`
+    :`Tiến độ bán mới (Banmoi) cùng kỳ ${fmtMomPct(mtdBanGNar, prevBanGNar)} vs ${d.thangPrevLabel||'T-1'} (${fmtVnd(mtdBanGNar)} vs ${fmtVnd(prevBanGNar)}). ${amYeuTxt||'Duy trì và nhân rộng mô hình từ AM top.'}`;
   const dtBanMoiDuKien=(()=>{
     const tbNgay=d.elapsed&&mtdBanGNar?mtdBanGNar/d.elapsed:0;
     const parts=[];
-    if(tbNgay>0) parts.push(`Ước tính ~${fmtVnd(tbNgay*7)} DT nhóm G tuần tới (TB ngày MTD cùng kỳ × 7)`);
+    if(tbNgay>0) parts.push(`Ước tính ~${fmtVnd(tbNgay*7)} DT bán mới tuần tới (TB ngày MTD Banmoi × 7)`);
     if(d.slkhG) parts.push(`Tuần ${wk} vừa qua: ${fmt(d.slkhG)} KH · ${fmt(d.volG)} đơn — nếu duy trì nhịp tương tự có thể phát sinh ~${fmt(d.slkhG)} KH mới`);
     if((d.topAmBanMoi||[]).length) parts.push(`AM pipeline mạnh: ${(d.topAmBanMoi||[]).slice(0,3).map(x=>Array.isArray(x)?x[0]:x.am).join(', ')}`);
-    return parts.length?parts.join('. ')+'.':'Chưa đủ dữ liệu nhóm G để ước tính tuần tới.';
+    return parts.length?parts.join('. ')+'.':'Chưa đủ dữ liệu Banmoi để ước tính tuần tới.';
   })();
   const last5Lbl=(d.nhomA.last5||[]).map(isoShort2).join(' · ')||'—';
   const last7Lbl=(d.nhomA.last7||[]).map(isoShort2).join(' · ')||'—';
@@ -4465,7 +4493,7 @@ function buildWeeklyReportNarratives(d){
   if(d.nhomA.giamHang>0 && vanDe.length<3) vanDe.push({nhom:'Giữ cũ',moTa:`${d.nhomA.giamHang} KH A dự kiến giảm hạng (TB ngày×tháng < 45 tr)`,tacDong:'Tuột khỏi phân hạng A cuối tháng',uuTien:'Trung bình',tienDo:'Theo dõi MTD hàng ngày'});
   if((d.topAmGiam||[]).length && vanDe.length<3) vanDe.push({nhom:'Giữ cũ',moTa:`AM giảm DT tuần: ${d.topAmGiam.slice(0,3).map(([am,p])=>`${am} (${p.toFixed(0)}%)`).join(', ')}`,tacDong:'Giảm DT vùng so với tuần trước',uuTien:'Cao',tienDo:'Chưa xử lý — cần coaching AM'});
   if(d.pctCungKy<70 && vanDe.length<3) vanDe.push({nhom:'Giữ cũ/Vận hành',moTa:`MTD đạt ${d.pctCungKy.toFixed(0)}% KPI cùng kỳ (${d.elapsed}/${d.totalDays} ngày)`,tacDong:`Nguy cơ không đạt target tháng ${fmtVnd(d.targetThang)}`,uuTien:'Cao',tienDo:'Theo dõi hàng ngày'});
-  if((!d.slkhG||(!isNaN(banMoiMomNum)&&banMoiMomNum<-5))&&vanDe.length<3) vanDe.push({nhom:'Bán mới',moTa:`Nhóm G cùng kỳ ${fmtMomPct(mtdBanGNar, prevBanGNar)} (${fmtVnd(mtdBanGNar)} vs ${fmtVnd(prevBanGNar)}) · ${fmt(d.slkhG)} KH mới tuần ${wk} · ${fmt(d.volG)} đơn`,tacDong:'Chậm tiến độ bán mới',uuTien:'Trung bình',tienDo:'Đang triển khai'});
+  if((!d.slkhG||(!isNaN(banMoiMomNum)&&banMoiMomNum<-5))&&vanDe.length<3) vanDe.push({nhom:'Bán mới',moTa:`Banmoi cùng kỳ ${fmtMomPct(mtdBanGNar, prevBanGNar)} (${fmtVnd(mtdBanGNar)} vs ${fmtVnd(prevBanGNar)}) · ${fmt(d.slkhG)} KH mới tuần ${wk} · ${fmt(d.volG)} đơn`,tacDong:'Chậm tiến độ bán mới',uuTien:'Trung bình',tienDo:'Đang triển khai'});
   const giaiPhap=[];
   if(churn.length) giaiPhap.push({gp:'Chăm sóc KH A không lên đơn 7 ngày',doiTuong:`${churn.length} KH A (${[...new Set(churn.map(r=>r.am))].slice(0,3).join(', ')})`,mucTieu:'Khôi phục đơn trong tuần tới',ngay:'48h–tuần tới',pic:'AM phụ trách',hoTro:'CSKH / chính sách giá nếu cần'});
   if(giamDon.length && giaiPhap.length<3) giaiPhap.push({gp:'Đẩy sản lượng KH A giảm đơn',doiTuong:`${giamDon.length} KH A (${[...new Set(giamDon.map(r=>r.am))].slice(0,3).join(', ')})`,mucTieu:'DT dự kiến ≥45 tr cuối tháng',ngay:'Tuần tới',pic:'AM phụ trách',hoTro:'Upsell / lịch giao hàng ổn định'});
@@ -4485,7 +4513,7 @@ function buildWeeklyReportNarratives(d){
   const thang6Lbl=d.thangPrevLabel||'T-1';
   const tomTatMtdTong=`Tổng Doanh thu MTD ${fmtVnd(mtdTongCk||d.mtdLtc)}, so với MTD cùng kỳ ${thang6Lbl} (${fmtVnd(prevTongCk||kpiSamePeriod(d.prevLtc||0,d.elapsed,d.totalDays))}) đạt ${docPctDat(mtdTongCk||d.mtdLtc, prevTongCk||kpiSamePeriod(d.prevLtc||0,d.elapsed,d.totalDays))}`;
   const tomTatMtdGiuCu=`Giữ cũ ${fmtVnd(mtdGiu)}, so với MTD cùng kỳ ${thang6Lbl} (${fmtVnd(prevGiuCk)}) đạt ${docPctDat(mtdGiu, prevGiuCk)}`;
-  const tomTatMtdBanMoi=`Bán mới (nhóm G) cùng kỳ ${d.elapsed||'—'} ngày: ${fmtVnd(mtdBanG)} vs ${thang6Lbl} ${fmtVnd(prevBanG)} · đạt ${docPctDat(mtdBanG, prevBanG)} · ${fmtMomPct(mtdBanG, prevBanG)}`;
+  const tomTatMtdBanMoi=`Bán mới (Banmoi/KHM) cùng kỳ ${d.elapsed||'—'} ngày: ${fmtVnd(mtdBanG)} vs ${thang6Lbl} ${fmtVnd(prevBanG)} · đạt ${docPctDat(mtdBanG, prevBanG)} · ${fmtMomPct(mtdBanG, prevBanG)}`;
 
   // WoW comment: dùng 2 tuần hoàn chỉnh (vd W28 vs W27) khi tuần hiện tại chưa đủ ngày
   const wkCmpCur=d.weekCompareCur||d.weekCur;
@@ -4496,12 +4524,13 @@ function buildWeeklyReportNarratives(d){
   const giuWowV=docWowVerb(d.wowGiu||giuWow);
   const banMoiWeekCur=((d.nhomWeekMatrix&&d.nhomWeekMatrix.byWeek)||{})[wkCmpCur]||{};
   const banMoiWeekPrev=((d.nhomWeekMatrix&&d.nhomWeekMatrix.byWeek)||{})[wkCmpPrev]||{};
-  const dtBanMoiWeek=banMoiWeekCur.G||0;
-  const dtBanMoiWeekPrev=banMoiWeekPrev.G||0;
+  // Ưu tiên DT tuần từ Banmoi (đã gắn vào base); fallback ma trận nhóm G
+  const dtBanMoiWeek=(d.banMoiWeekDt!=null?d.banMoiWeekDt:(banMoiWeekCur.G||0))||0;
+  const dtBanMoiWeekPrev=(d.banMoiWeekDtPrev!=null?d.banMoiWeekDtPrev:(banMoiWeekPrev.G||0))||0;
   const banMoiWowV=docWowVerb(d.wowBanMoi||pctWoWText(dtBanMoiWeek, dtBanMoiWeekPrev));
   const tomTatTuanTong=`Tổng Doanh thu ${wkCmpCurLbl} ${totWow.verb} ${totWow.pct} so với ${wkCmpPrevLbl}`;
   const tomTatTuanGiuCu=`Giữ cũ ${fmtVnd(giuWeekCur)} (${giuWowV.verb} ${giuWowV.pct} so với ${wkCmpPrevLbl})`;
-  const tomTatTuanBanMoi=`Bán mới ${fmtVnd(dtBanMoiWeek)} (${banMoiWowV.verb} ${banMoiWowV.pct} so với ${wkCmpPrevLbl}) · SLKH ${fmt(d.slkhG)} · volume ${fmt(d.volG)} đơn`;
+  const tomTatTuanBanMoi=`Bán mới (Banmoi) ${fmtVnd(dtBanMoiWeek)} (${banMoiWowV.verb} ${banMoiWowV.pct} so với ${wkCmpPrevLbl}) · SLKH ${fmt(d.slkhG)} · volume ${fmt(d.volG)} đơn`;
 
   const _mCur=(d.thangLabel||'').match(/\/(\d+)$/);
   const _mPrev=(d.thangPrevLabel||'').match(/\/(\d+)$/);
@@ -4515,9 +4544,9 @@ function buildWeeklyReportNarratives(d){
   const nhanDinhGiuCuPrompt=`Tình hình khách hàng cũ lên đơn trong tháng ${thangCurDisp} MTD ${giuTotTe} so với tháng ${thangPrevDisp}${giuTotTe==='tệ hơn'?' => nếu tệ hơn thì nguyên nhân là gì?':'.'}`;
   const nhanDinhGiuCuTuan=`Tình hình khách hàng cũ lên đơn trong ${wkCmpCurLbl} ${giuTuanTotTe} so với ${wkCmpPrevLbl}${giuTuanTotTe==='tệ hơn'?' => nếu tệ hơn thì nguyên nhân là gì?':'.'}`;
   const nhanDinhBanMoiPrompt=prevBanG>0||mtdBanG>0
-    ?`Tốc độ bán mới (nhóm G) MTD cùng kỳ ${d.elapsed||'—'} ngày: tháng ${thangCurDisp} ${fmtVnd(mtdBanG)} vs tháng ${thangPrevDisp} ${fmtVnd(prevBanG)} → ${banMoiTotTe} (${banMoiMomTxt}, đạt ${banMoiDatTxt} cùng kỳ)${banMoiTotTe==='tệ hơn'?' => nếu tệ hơn thì nguyên nhân là gì?':'.'}`
-    :`Tốc độ bán mới MTD: chưa có đủ số liệu nhóm G cùng kỳ tháng ${thangCurDisp} vs tháng ${thangPrevDisp} để so sánh.`;
-  const nhanDinhBanMoiTuan=`SLKH ${wkCmpCurLbl}: ${fmt(d.slkhG)} KH bán mới · volume ${fmt(d.volG)} đơn · TB ~${fmt(d.slkhAvgG||(d.slkhG?Math.round((d.volG||0)/d.slkhG):0))} đơn/KH · DT nhóm G ${fmtVnd(dtBanMoiWeek)} (${banMoiWowV.verb} ${banMoiWowV.pct} vs ${wkCmpPrevLbl}).`;
+    ?`Tốc độ bán mới (Banmoi) MTD cùng kỳ ${d.elapsed||'—'} ngày: tháng ${thangCurDisp} ${fmtVnd(mtdBanG)} vs tháng ${thangPrevDisp} ${fmtVnd(prevBanG)} → ${banMoiTotTe} (${banMoiMomTxt}, đạt ${banMoiDatTxt} cùng kỳ)${banMoiTotTe==='tệ hơn'?' => nếu tệ hơn thì nguyên nhân là gì?':'.'}`
+    :`Tốc độ bán mới MTD: chưa có đủ số liệu Banmoi cùng kỳ tháng ${thangCurDisp} vs tháng ${thangPrevDisp} để so sánh.`;
+  const nhanDinhBanMoiTuan=`SLKH ${wkCmpCurLbl}: ${fmt(d.slkhG)} KH bán mới · volume ${fmt(d.volG)} đơn · TB ~${fmt(d.slkhAvgG||(d.slkhG?Math.round((d.volG||0)/d.slkhG):0))} đơn/KH · DT Banmoi ${fmtVnd(dtBanMoiWeek)} (${banMoiWowV.verb} ${banMoiWowV.pct} vs ${wkCmpPrevLbl}).`;
 
   // Nhận xét chung AM bán mới + gợi ý vấn đề (điền tay / sửa khi xuất)
   const amRowsAll=(d.amBanMoiRows||[]).slice().sort((a,b)=>b.dt-a.dt||b.kh-a.kh);
@@ -4530,7 +4559,7 @@ function buildWeeklyReportNarratives(d){
   })();
   const nhanXetChungAmBanMoi=amRowsAll.length
     ? `${wkCmpCurLbl} các AM bán mới ${amTotTe} so với ${wkCmpPrevLbl}${(d.topAmBanMoiYeu||[]).length?` — AM cần bám sát: ${(d.topAmBanMoiYeu||[]).slice(0,3).map(r=>r.am).join(', ')}`:''}. GĐV cần tập trung hỗ trợ AM để gia tăng khách mới tuần tới.`
-    : `Chưa có đủ dữ liệu AM nhóm G tuần ${wkCmpCurLbl} để nhận xét.`;
+    : `Chưa có đủ dữ liệu AM bán mới (Banmoi) tuần ${wkCmpCurLbl} để nhận xét.`;
   const vanDeBanMoiBullets=(d.topAmBanMoiYeu||[]).length
     ? (d.topAmBanMoiYeu||[]).slice(0,5).map(r=>{
         const wow=r.dtPrev>0?` (${fmtMomPct(r.dt,r.dtPrev)} DT)`:'';
@@ -4582,7 +4611,7 @@ function suggestGiamDonAction(r){
 }
 
 function buildWeeklyReportData(){
-  const { ketQua, kpiAM, dtNgay, phanNhom, khNhomA, dtThang, dtThang2025, dtGtc, totalKH } = window._DATA;
+  const { ketQua, kpiAM, dtNgay, phanNhom, khNhomA, dtThang, dtThang2025, dtGtc, totalKH, banmoi } = window._DATA;
   const thang = currentThang();
   const thangPrevM = prevThang(thang);
   const thangLabel = formatThangLabel(thang);
@@ -4756,52 +4785,64 @@ function buildWeeklyReportData(){
     }
   }
   if(!volGSource && volG) volGSource='Nguồn volume không xác định';
-  if(!volG) volGSource='Chưa đọc được cột Volume nhóm G trên TotalKH';
-  // Khớp giữ cũ + bán mới với tổng LTC (tỷ lệ TotalKH → scale theo Kết Quả)
-  {
-    const alloc=allocateGiuBanMoi(mtdLtc, mtdGiu, mtdBanMoi);
-    mtdGiu=alloc.mtdGiu;
-    mtdBanMoi=alloc.mtdBanMoi;
-  }
-  // A / BCD / EF / G: TotalKH cùng kỳ (N ngày) — tỷ lệ scale khớp LTC / LTC cùng kỳ T-1
+  if(!volG) volGSource='Chưa đọc được volume bán mới (Banmoi / TotalKH)';
+  // Giữ cũ từ TotalKH (A/BCD/EF); Bán mới từ sheet Banmoi (KHM) — không scale Banmoi theo tỷ lệ TotalKH G
   const mtdARaw=sumNhomDtCungKy(totalKH, thang, 'A', elapsed);
   const mtdBcdRaw=sumNhomDtCungKy(totalKH, thang, 'BCD', elapsed);
   const mtdEfRaw=sumNhomDtCungKy(totalKH, thang, 'EF', elapsed);
-  const mtdBanMoiRaw=sumNhomDtCungKy(totalKH, thang, 'G', elapsed);
   const prevARaw=thangPrevM?sumNhomDtCungKy(totalKH, thangPrevM, 'A', elapsed):0;
   const prevBcdRaw=thangPrevM?sumNhomDtCungKy(totalKH, thangPrevM, 'BCD', elapsed):0;
   const prevEfRaw=thangPrevM?sumNhomDtCungKy(totalKH, thangPrevM, 'EF', elapsed):0;
-  const prevBanMoiRaw=thangPrevM?sumNhomDtCungKy(totalKH, thangPrevM, 'G', elapsed):0;
   const mtdGiuRaw=mtdARaw+mtdBcdRaw+mtdEfRaw;
   const prevGiuRaw=prevARaw+prevBcdRaw+prevEfRaw;
-  // Khớp MTD với tổng LTC (Kết Quả đã cộng cả 2026/7 + 2026/07)
-  const allocCur=allocateGiuBanMoi(mtdLtc, mtdGiuRaw, mtdBanMoiRaw);
-  const mtdGiuCungKy=allocCur.mtdGiu;
-  const mtdBanMoiCungKy=allocCur.mtdBanMoi;
-  const mtdACungKy=mtdGiuRaw>0?mtdGiuCungKy*(mtdARaw/mtdGiuRaw):0;
+  // Banmoi = nguồn bán mới chính thức
+  const mtdBanMoiRaw=sumBanMoiKhmCungKy(banmoi, thang, elapsed);
+  const prevBanMoiRaw=thangPrevM?sumBanMoiKhmCungKy(banmoi, thangPrevM, elapsed):0;
+  // MTD bán mới lấy tuyệt đối từ Banmoi; giữ cũ = phần còn lại của LTC (hoặc tỷ lệ TotalKH nếu Banmoi = 0)
+  let mtdBanMoiCungKy=mtdBanMoiRaw;
+  let mtdGiuCungKy;
+  if(mtdBanMoiRaw>0 && mtdLtc>0){
+    mtdGiuCungKy=Math.max(0, mtdLtc-mtdBanMoiRaw);
+  } else {
+    const allocCur=allocateGiuBanMoi(mtdLtc, mtdGiuRaw, mtdBanMoiRaw);
+    mtdGiuCungKy=allocCur.mtdGiu;
+    mtdBanMoiCungKy=allocCur.mtdBanMoi;
+  }
+  const mtdACungKy=mtdGiuRaw>0?mtdGiuCungKy*(mtdARaw/mtdGiuRaw):(mtdGiuCungKy||0);
   const mtdBcdCungKy=mtdGiuRaw>0?mtdGiuCungKy*(mtdBcdRaw/mtdGiuRaw):0;
   const mtdEfCungKy=mtdGiuRaw>0?mtdGiuCungKy*(mtdEfRaw/mtdGiuRaw):0;
-  // Cơ sở T-1 cùng kỳ = DT tháng trước × (elapsed/totalDays) — cùng cách tính MoM của LTC
+  // Cơ sở T-1 cùng kỳ
   const prevLtcCungKy = prevLtcCungKyDtNgay>0 ? prevLtcCungKyDtNgay : kpiSamePeriod(prevLtc, elapsed, totalDays);
-  const allocPrev=allocateGiuBanMoi(prevLtcCungKy||(prevGiuRaw+prevBanMoiRaw), prevGiuRaw, prevBanMoiRaw);
-  const prevGiuCungKy=allocPrev.mtdGiu;
-  const prevBanMoiCungKy=allocPrev.mtdBanMoi;
+  let prevBanMoiCungKy=prevBanMoiRaw;
+  let prevGiuCungKy;
+  if(prevBanMoiRaw>0 && (prevLtcCungKy||0)>0){
+    prevGiuCungKy=Math.max(0, (prevLtcCungKy||0)-prevBanMoiRaw);
+  } else {
+    const allocPrev=allocateGiuBanMoi(prevLtcCungKy||(prevGiuRaw+prevBanMoiRaw), prevGiuRaw, prevBanMoiRaw);
+    prevGiuCungKy=allocPrev.mtdGiu;
+    prevBanMoiCungKy=allocPrev.mtdBanMoi;
+  }
   const prevACungKy=prevGiuRaw>0?prevGiuCungKy*(prevARaw/prevGiuRaw):0;
   const prevBcdCungKy=prevGiuRaw>0?prevGiuCungKy*(prevBcdRaw/prevGiuRaw):0;
   const prevEfCungKy=prevGiuRaw>0?prevGiuCungKy*(prevEfRaw/prevGiuRaw):0;
   const targetBanMoiCungKy=kpiSamePeriod(targetBanMoi, elapsed, totalDays);
-  // Prev-month giữ cũ / bán mới từ TotalKH (cả tháng), scale khớp prevLtc nếu có
-  let prevGiu=0, prevBanMoi=0;
+  // Prev-month giữ cũ từ TotalKH; bán mới từ Banmoi
+  let prevGiu=0, prevBanMoi=prevBanMoiRaw;
   if(totalKH&&totalKH.length>2&&thangPrevM){
     const prevRecs=parseTotalKHNhomRecs(totalKH).recs.filter(r=>r.thang&&thangEq(r.thang,thangPrevM));
     prevGiu=prevRecs.filter(r=>NHOM_GIU_CU.includes(r.grp)).reduce((s,r)=>s+r.dt,0);
-    prevBanMoi=prevRecs.filter(r=>r.grp==='G').reduce((s,r)=>s+r.dt,0);
-    if(prevLtc>0){
-      const prevAlloc=allocateGiuBanMoi(prevLtc, prevGiu, prevBanMoi);
+    if(prevLtc>0 && prevBanMoiRaw>0){
+      prevGiu=Math.max(0, prevLtc-prevBanMoiRaw);
+      prevBanMoi=prevBanMoiRaw;
+    } else if(prevLtc>0){
+      const prevAlloc=allocateGiuBanMoi(prevLtc, prevGiu, prevBanMoiRaw);
       prevGiu=prevAlloc.mtdGiu;
       prevBanMoi=prevAlloc.mtdBanMoi;
     }
   }
+  // Đồng bộ biến mtdGiu/mtdBanMoi (dùng ở narrative tuần)
+  mtdGiu=mtdGiuCungKy;
+  mtdBanMoi=mtdBanMoiCungKy;
 
   const projLtc=projectMonth(mtdLtc,elapsed,totalDays);
   const projGtc=projectMonth(mtdGtc,elapsed,totalDays);
@@ -4837,7 +4878,7 @@ function buildWeeklyReportData(){
       redCells:['mtd']
     },
     {
-      label:'Doanh thu bán mới (Nhóm G)',
+      label:'Doanh thu bán mới (Banmoi/KHM)',
       thucDat: prevBanMoiCungKy,
       mtd:mtdBanMoiCungKy, mtdPrev:prevBanMoiCungKy, target:targetBanMoi,
       pctMtd:pct(mtdBanMoiCungKy,targetBanMoi),
@@ -4846,26 +4887,51 @@ function buildWeeklyReportData(){
       redCells:['mtd','pctProj','mom']
     }
   ];
-  const slkhAvgG=slkhG?Math.round(volG/slkhG):0;
   const matchWk=(r,w)=>r.tuan===w||(tkMetrics&&String(r.tuan)===String(w));
 
   let topAmBanMoi=[], topAmGiam=[], topAmBanMoiYeu=[], amBanMoiRows=[], nhomWeekGiu=[];
   const wCmpCur = weekCompareCur || weekCur;
   const wCmpPrev = weekComparePrev || weekPrev;
-  if(tkMetrics&&wCmpCur){
-    const wCur=tkMetrics.byWeek[wCmpCur]||{};
-    const wPrev=tkMetrics.byWeek[wCmpPrev]||{};
-    const amRank=buildAmBanMoiWeekRank(tkMetrics.byWeek, wCmpCur, wCmpPrev, 5);
+
+  // Ưu tiên bán mới theo tuần từ sheet Banmoi
+  const banmoiByWeek=buildBanMoiByWeek(banmoi);
+  const bmWeekCurKey=wCmpCur?(Object.keys(banmoiByWeek).find(k=>sameWeekKey(k,wCmpCur))||wCmpCur):'';
+  const bmWeekPrevKey=wCmpPrev?(Object.keys(banmoiByWeek).find(k=>sameWeekKey(k,wCmpPrev))||wCmpPrev):'';
+  let banMoiWeekDt=0, banMoiWeekDtPrev=0;
+  if(Object.keys(banmoiByWeek).length && bmWeekCurKey){
+    const bmCur=banmoiByWeek[bmWeekCurKey]||{};
+    const bmPrev=banmoiByWeek[bmWeekPrevKey]||{};
+    banMoiWeekDt=bmCur.dtBanMoi||0;
+    banMoiWeekDtPrev=bmPrev.dtBanMoi||0;
+    wowBanMoi=pctWoWText(banMoiWeekDt, banMoiWeekDtPrev);
+    slkhG=bmCur.khG?bmCur.khG.size:0;
+    volG=Math.round(bmCur.volG||0);
+    volGSource=`Banmoi · KHM · tuần ${weekLabelShort(bmWeekCurKey||wCmpCur)}`;
+    const amRank=buildAmBanMoiWeekRank(banmoiByWeek, bmWeekCurKey, bmWeekPrevKey, 5);
     topAmBanMoi=amRank.top.map(r=>[r.am, r.dt, r]);
     topAmBanMoiYeu=amRank.yeu;
     amBanMoiRows=(amRank.rows||[]).slice().sort((a,b)=>b.dt-a.dt||b.kh-a.kh);
-    nhomWeekGiu=NHOM_GIU_CU.map(g=>({g, cur:(wCur.byGrp||{})[g]||0, prev:(wPrev.byGrp||{})[g]||0}));
+  }
+
+  if(tkMetrics&&wCmpCur){
+    const wCur=tkMetrics.byWeek[wCmpCur]||{};
+    const wPrev=tkMetrics.byWeek[wCmpPrev]||{};
+    if(!nhomWeekGiu.length){
+      nhomWeekGiu=NHOM_GIU_CU.map(g=>({g, cur:(wCur.byGrp||{})[g]||0, prev:(wPrev.byGrp||{})[g]||0}));
+    }
     const amGiamTk={};
     Object.keys({...(wCur.byAmAll||{}),...(wPrev.byAmAll||{})}).forEach(nv=>{
       const c=(wCur.byAmAll||{})[nv]||0, p=(wPrev.byAmAll||{})[nv]||0;
       if(p&&c<p) amGiamTk[nv]=((c-p)/p*100);
     });
     topAmGiam=Object.entries(amGiamTk).sort((a,b)=>a[1]-b[1]).slice(0,5);
+    // Fallback AM bán mới nếu Banmoi trống
+    if(!topAmBanMoi.length){
+      const amRank=buildAmBanMoiWeekRank(tkMetrics.byWeek, wCmpCur, wCmpPrev, 5);
+      topAmBanMoi=amRank.top.map(r=>[r.am, r.dt, r]);
+      topAmBanMoiYeu=amRank.yeu;
+      amBanMoiRows=(amRank.rows||[]).slice().sort((a,b)=>b.dt-a.dt||b.kh-a.kh);
+    }
   }
   if(!topAmBanMoi.length){
     const amBanMoi={};
@@ -4901,7 +4967,8 @@ function buildWeeklyReportData(){
     nhomWeekGiu=NHOM_GIU_CU.map(g=>({ g, cur:sumPnDt(monthPn,r=>matchWk(r,wCmpCur)&&r.grp===g), prev:sumPnDt(monthPn,r=>matchWk(r,wCmpPrev)&&r.grp===g) }));
   }
 
-  // Ưu tiên DT đầy đủ theo tuần từ ma trận (không cắt theo tháng) cho WoW Tổng/Giữ cũ/Bán mới
+  // Ưu tiên DT đầy đủ theo tuần từ ma trận (không cắt theo tháng) cho WoW Tổng/Giữ cũ
+  // WoW Bán mới đã lấy từ Banmoi ở trên — chỉ override nếu Banmoi trống
   if(nhomWeekMatrix&&nhomWeekMatrix.byWeek&&wCmpCur){
     const c=nhomWeekMatrix.byWeek[wCmpCur]||{};
     const p=nhomWeekMatrix.byWeek[wCmpPrev]||{};
@@ -4912,9 +4979,10 @@ function buildWeeklyReportData(){
       wowLtc=pctWoWText(cTot, pTot);
       wowGiu=pctWoWText(cGiu, pGiu);
     }
-    if((c.G||0)||(p.G||0)) wowBanMoi=pctWoWText(c.G||0, p.G||0);
+    if(!Object.keys(banmoiByWeek).length && ((c.G||0)||(p.G||0))) wowBanMoi=pctWoWText(c.G||0, p.G||0);
     nhomWeekGiu=NHOM_GIU_CU.map(g=>({g, cur:c[g]||0, prev:p[g]||0}));
   }
+  const slkhAvgG=slkhG?Math.round(volG/slkhG):0;
   let nhomA = { total:0, coDon:0, giamHang:0, giamHangPrev:null, nguyCo:0, churnRows:[], giamDonRows:[], weekCur:'', weekPrev:'', wowCoDon:'—', wowGiamHang:'—', wowNguyCo:'—' };
   const nhomAWeekly = parseKhNhomAWeekly(khNhomA, thang, {elapsed, totalDays}, dtNgay);
   if(nhomAWeekly){
@@ -4962,11 +5030,12 @@ function buildWeeklyReportData(){
     pctHoanThanhGtc: pct(mtdGtc, targetPlan),
     wowLtc, wowGtc: prevGtc?fmtMomPct(mtdGtc, kpiSamePeriod(prevGtc, elapsed, totalDays)||prevGtc):'—',
     mtdGiu: mtdGiuCungKy, mtdBanMoi: mtdBanMoiCungKy, mtdBanMoiCungKy, mtdACungKy, mtdBcdCungKy, mtdEfCungKy, wowGiu, wowBanMoi,
-    mtdBanMoiRaw, prevBanMoiRaw, // nhóm G cùng kỳ thuần từ TotalKH (N ngày đầu tháng)
+    mtdBanMoiRaw, prevBanMoiRaw, // bán mới cùng kỳ từ sheet Banmoi (KHM)
     targetGiuCu, targetBanMoi, targetBanMoiCungKy, targetBanMoiCm, prevLtc, prevGtc, prevGiu, prevBanMoi,
     prevBanMoiCungKy, prevACungKy, prevBcdCungKy, prevEfCungKy, prevGiuCungKy,
     projLtc, projGtc, projGiu, projBanMoi, planRows, nhomWeekMatrix,
-    slkhG, volG, slkhAvgG, volGSource, topAmBanMoi, topAmBanMoiYeu, amBanMoiRows, topAmGiam, nhomWeekGiu, nhomA, tiemNang, weekBreakdown, amWeekDecline
+    slkhG, volG, slkhAvgG, volGSource, topAmBanMoi, topAmBanMoiYeu, amBanMoiRows, topAmGiam, nhomWeekGiu, nhomA, tiemNang, weekBreakdown, amWeekDecline,
+    banMoiWeekDt, banMoiWeekDtPrev
   };
   base.narratives = buildWeeklyReportNarratives(base);
   return base;
@@ -5205,8 +5274,9 @@ ${(d.planRows||[]).map(docRowPlan).join('\n')}
  · Target tháng = <b>KPI CM</b> (<b>${fmtVnd(d.targetThang||0)}</b>)${d.targetVung&&d.targetVung!==d.targetThang?` · KPI Vùng tham chiếu: <b>${fmtVnd(d.targetVung)}</b>`:''}.
  · Target giữ cũ = DT ${h('',d.thangPrevLabel)} (<b>${fmtVnd(d.targetGiuCu||0)}</b>) · Target bán mới = KPI CM − giữ cũ (<b>${fmtVnd(d.targetBanMoi||0)}</b>).
  · Cột <span class="red">MTD-1</span> = MTD cùng kỳ ${d.elapsed} ngày tháng trước (so sánh MoM).
- · So sánh giữ cũ / bán mới / nhóm KH: doanh thu lấy từ <b>TotalKH</b> cùng kỳ ${d.elapsed} ngày; quy về đơn vị triệu đồng bằng tỷ lệ scale khớp LTC (Kết Quả).
- · Tăng/giảm sv ${h('',d.thangPrevLabel)}: so MTD với MTD cùng kỳ T-1 (TotalKH).</p>
+ · So sánh giữ cũ: doanh thu từ <b>TotalKH</b> (A/BCD/EF) cùng kỳ ${d.elapsed} ngày, scale khớp LTC.
+ · Bán mới (MTD / tuần / AM): nguồn sheet <b>Banmoi</b> (KHM · lấy TC / giao trả TC, cửa sổ 30 ngày).
+ · Tăng/giảm sv ${h('',d.thangPrevLabel)}: so MTD với MTD cùng kỳ T-1.</p>
 
 <p><b>Tuần:</b> Doanh thu theo nhóm KH (5 tuần gần nhất · % = so với tuần liền trước)${d.weekCurIncomplete?` · <i>Comment &amp; số liệu so sánh dùng <b>${h('',d.weekCompareLabel)}</b> vs <b>${h('',d.weekComparePrevLabel)}</b> (đang ở ${h('',d.weekLabel)} — chưa so tuần đang chạy)</i>`:''}</p>
 ${docNhomWeekTable(d.nhomWeekMatrix)}
@@ -5273,7 +5343,7 @@ ${shopPipelineHtml}
   <th>So sánh tăng/giảm với tuần trước</th>
   <th>Ghi chú (nếu có)</th>
 </tr></thead><tbody>
-${docRowNhomA('Tổng số lượng KH nhóm A đầu tháng', fmt(d.nhomA.total), '—', `Tháng ${d.thangLabel}`)}
+${docRowNhomA('Tổng số lượng KH nhóm A đầu tháng', fmt(d.nhomA.total), '—', `Số KH lên đơn tháng ${d.thangLabel}`)}
 ${docRowNhomA('Số KH có lên đơn đến hiện tại', fmt(d.nhomA.coDon), d.nhomA.wowCoDon, 'MTD tháng hiện tại')}
 ${docRowNhomA('1. Số KH A dự kiến giảm hạng', fmt(d.nhomA.giamHang), d.nhomA.wowGiamHang, n.ghiChuGiamHang||`DT TB ngày × ${d.nhomA.totalDays||d.totalDays} ngày < 45 tr (qua ${d.nhomA.elapsed||d.elapsed} ngày)`)}
 ${docRowNhomA('2. Số KH A nguy cơ rời bỏ', fmt(d.nhomA.nguyCo), d.nhomA.wowNguyCo, nguyCoNote)}
