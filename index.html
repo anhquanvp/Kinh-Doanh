@@ -1124,7 +1124,13 @@ function parseBanMoiSheet(banmoi){
   const cols={
     ma: idxFindAny(h,['MaKH','Mã KH','MãKH','KH','ClientID','Client Id','ID KH','IDKH','ShopID'],0),
     ten: idxFindAny(h,['TenKH','Tên KH','TênKH','Tên shop','Shop','ShopName'],1),
-    first: idxFindAny(h,['Ngày LTC đầu tiên','Ngay LTC dau tien','Ngày đầu tiên','Ngày lên đơn đầu','Ngày quay lại','FirstOrder','Ngày đầu'],2),
+    first: (()=>{
+      let i=exact('Ngày LTC đầu tiên');
+      if(i<0) i=exact('Ngay LTC dau tien');
+      if(i<0) i=idxFindAny(h,['Ngày đầu tiên','Ngày lên đơn đầu','Ngày quay lại','FirstOrder','Ngày đầu'],2);
+      if(i<0) i=2; // cột C cố định
+      return i;
+    })(),
     // Ngày giao dịch: ưu tiên đúng tên "Ngày" / cột J (index 9) — KHÔNG lấy "Ngày LTC đầu tiên"
     ngay: (()=>{
       let i=exact('Ngày');
@@ -1172,19 +1178,19 @@ function parseBanMoiSheet(banmoi){
     const isoNgay=cols.ngay>=0?normalizeNgayToIso(r[cols.ngay]):'';
     const iso=/^\d{4}-\d{2}-\d{2}$/.test(isoJ)?isoJ:isoNgay;
     const firstIso=cols.first>=0?normalizeNgayToIso(r[cols.first]):'';
+    // Chỉ lấy ngày lên đơn đầu tiên từ cột C — không suy từ ngày giao dịch
+    if(ma && /^\d{4}-\d{2}-\d{2}$/.test(firstIso)){
+      if(!firstByMa[ma] || firstIso<firstByMa[ma]) firstByMa[ma]=firstIso;
+    }
     const dt=dayDt(r[cols.dt]);
-    const volRaw=cols.vol>=0?parseVNNum(r[cols.vol]):0;
-    const vol=volRaw>0?Math.round(volRaw):(dt>0?1:0); // có DT mà thiếu Volume → 1 đơn
+    // Volume: cố định cột I (index 8) theo layout Banmoi; fallback header Volume
+    const volCell=r[8]!==undefined&&r[8]!==''?r[8]:(cols.vol>=0?r[cols.vol]:'');
+    const volRaw=parseVNNum(volCell);
+    const vol=volRaw>0?Math.round(volRaw):(dt>0?1:0);
     const status=cols.status>=0?String(r[cols.status]||'').trim():'';
     const weekIso=/^\d{4}-\d{2}-\d{2}$/.test(isoJ)?isoJ:iso;
     const tuan=normalizeBanMoiWeekKey(tuanRaw || weekIso, iso);
     if(!isKhmSuccessStatus(status)) continue;
-    if(ma && /^\d{4}-\d{2}-\d{2}$/.test(firstIso)){
-      if(!firstByMa[ma] || firstIso<firstByMa[ma]) firstByMa[ma]=firstIso;
-    }
-    if(ma && /^\d{4}-\d{2}-\d{2}$/.test(iso)){
-      if(!firstByMa[ma] || iso<firstByMa[ma]) firstByMa[ma]=iso;
-    }
     if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) continue;
     if(!(dt>0) && !ma && !(vol>0)) continue;
     recs.push({
@@ -1203,23 +1209,20 @@ function parseBanMoiSheet(banmoi){
       tuan
     });
   }
-  // Gán firstIso + lọc cửa sổ 30 ngày: [ngày đầu, ngày đầu + 29]
-  const out=[];
+  // Bổ sung firstIso từ map nếu dòng thiếu cột C
   recs.forEach(r=>{
-    const first=r.firstIso || firstByMa[r.ma] || r.iso;
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(first)) return;
-    const end=isoShiftDays(first,29);
-    if(r.iso<first || r.iso>end) return;
-    out.push({...r, firstIso:first, winEnd:end});
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(r.firstIso) && r.ma && firstByMa[r.ma])
+      r.firstIso=firstByMa[r.ma];
   });
+  // Sheet Banmoi = nguồn bán mới: SLKH theo ngày lên đơn đầu tiên (cột C), Volume theo cột I
   return {
-    recs:out,
+    recs,
     firstByMa,
     header:h,
     cols,
-    note: out.length
-      ? `DT KHM = lấy TC / giao trả TC (chưa VAT) · Volume cột I · tuần = WEEKNUM(cột J;2) · cửa sổ 30 ngày`
-      : 'Sheet Banmoi không có dòng KHM hợp lệ trong cửa sổ 30 ngày'
+    note: recs.length
+      ? `SLKH = KH có Ngày LTC đầu tiên (cột C) trong kỳ · Volume = Σ cột I · ngày giao dịch cột J`
+      : 'Sheet Banmoi không có dòng KHM hợp lệ'
   };
 }
 function getBanMoiFilter(){
@@ -1427,18 +1430,113 @@ function buildBanMoiByWeek(banmoi){
   });
   return byWeek;
 }
+/** Đổi week key `YYYY/W` → khoảng Thứ 2 → Chủ nhật (ISO). */
+function weekKeyToDateSpan(weekKey){
+  const m=String(weekKey||'').match(/^(\d{4})\/(\d+)$/);
+  if(!m) return null;
+  const y=+m[1], w=+m[2];
+  if(!(y>2000) || !(w>=1&&w<=53)) return null;
+  const jan4=new Date(Date.UTC(y,0,4));
+  const dow=jan4.getUTCDay()||7;
+  const mon=new Date(jan4);
+  mon.setUTCDate(jan4.getUTCDate()-(dow-1)+(w-1)*7);
+  const dates=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(mon);
+    d.setUTCDate(mon.getUTCDate()+i);
+    dates.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`);
+  }
+  return {from:dates[0], to:dates[6], dates};
+}
+/** Cộng Banmoi trong tuần theo logic bán mới:
+ *  - SLKH = số KH có ngày lên đơn đầu tiên (cột C) ∈ [from,to]
+ *  - Volume / DT = Σ cột Volume / DoanhThu của các dòng thuộc KH đó có ngày giao dịch (cột J) ∈ [from,to]
+ */
+function aggregateBanMoiNewCustomersInSpan(recs, firstByMa, from, to){
+  const out={dtBanMoi:0,volG:0,khG:new Set(),days:new Set(),byAmG:{}};
+  if(!from||!to||!recs||!recs.length) return out;
+  const resolveFirst=r=>{
+    if(/^\d{4}-\d{2}-\d{2}$/.test(r.firstIso||'')) return r.firstIso;
+    if(r.ma && firstByMa && /^\d{4}-\d{2}-\d{2}$/.test(firstByMa[r.ma]||'')) return firstByMa[r.ma];
+    return '';
+  };
+  // Tập KH mới: ngày lên đơn đầu tiên trong tuần
+  const newKh=new Set();
+  Object.keys(firstByMa||{}).forEach(ma=>{
+    const f=firstByMa[ma];
+    if(f&&f>=from&&f<=to) newKh.add(ma);
+  });
+  recs.forEach(r=>{
+    const f=resolveFirst(r);
+    if(f&&f>=from&&f<=to&&r.ma&&r.ma!=='—') newKh.add(r.ma);
+  });
+  // Volume + DT: đơn phát sinh trong tuần của các KH mới đó
+  recs.forEach(r=>{
+    if(!r.ma || r.ma==='—' || !newKh.has(r.ma)) return;
+    if(!r.iso || r.iso<from || r.iso>to) return;
+    const vol=Math.max(0, Math.round(+r.vol||0));
+    out.dtBanMoi+=(r.dt||0);
+    out.volG+=vol;
+    out.days.add(r.iso);
+    out.khG.add(r.ma);
+    const am=(r.am||'').trim()||'—';
+    if(!out.byAmG[am]) out.byAmG[am]={dt:0,vol:0,kh:new Set()};
+    out.byAmG[am].dt+=(r.dt||0);
+    out.byAmG[am].vol+=vol;
+    out.byAmG[am].kh.add(r.ma);
+  });
+  // Đảm bảo đếm đủ SLKH kể cả KH mới chưa có dòng giao dịch parse được trong tuần
+  newKh.forEach(ma=>out.khG.add(ma));
+  return out;
+}
+/**
+ * Metrics bán mới theo tuần xuất báo cáo.
+ * SLKH theo ngày lên đơn đầu tiên (cột C); Volume theo cột I; khớp tuần bằng khoảng Thứ2→CN.
+ */
+function buildBanMoiWeekBundle(banmoi, weekCur, weekPrev){
+  const parsed=parseBanMoiSheet(banmoi);
+  const recs=parsed.recs||[];
+  const firstByMa=parsed.firstByMa||{};
+  const empty={dtBanMoi:0,volG:0,khG:new Set(),days:new Set(),byAmG:{}};
+  const spanCur=weekKeyToDateSpan(weekCur);
+  const spanPrev=weekKeyToDateSpan(weekPrev);
+  const bmCur=spanCur?aggregateBanMoiNewCustomersInSpan(recs, firstByMa, spanCur.from, spanCur.to):empty;
+  const bmPrev=spanPrev?aggregateBanMoiNewCustomersInSpan(recs, firstByMa, spanPrev.from, spanPrev.to):empty;
+  const keyCur=spanCur?(sheetsWeekNum(spanCur.dates[3],2)||{}).key||weekCur:weekCur;
+  const keyPrev=spanPrev?(sheetsWeekNum(spanPrev.dates[3],2)||{}).key||weekPrev:weekPrev;
+  const byWeek={};
+  if(keyCur) byWeek[keyCur]=bmCur;
+  if(keyPrev && keyPrev!==keyCur) byWeek[keyPrev]=bmPrev;
+  return {
+    byWeek,
+    keyCur:keyCur||weekCur||'',
+    keyPrev:keyPrev||weekPrev||'',
+    bmCur, bmPrev,
+    spanCur, spanPrev,
+    note:parsed.note||''
+  };
+}
 function pickBanMoiWeek(byWeek, weekKey){
   if(!byWeek||!weekKey) return null;
   if(byWeek[weekKey]) return byWeek[weekKey];
   const k=Object.keys(byWeek).find(x=>sameWeekKey(x,weekKey));
   return k?byWeek[k]:null;
 }
-/** Tổng DT KHM trong tháng (cùng kỳ N ngày đầu) từ Banmoi — đã lọc cửa sổ 30 ngày. */
+/** Tổng DT bán mới cùng kỳ: KH có ngày lên đơn đầu tiên trong N ngày đầu tháng. */
 function sumBanMoiKhmCungKy(banmoi, thang, elapsedDays){
-  const {recs}=parseBanMoiSheet(banmoi);
+  const {recs, firstByMa}=parseBanMoiSheet(banmoi);
   const maxD=Math.max(1, elapsedDays||31);
+  const newKh=new Set();
+  Object.keys(firstByMa||{}).forEach(ma=>{
+    const f=firstByMa[ma];
+    const mk=monthKeyFromIso(f);
+    if(!mk||!thangEq(mk,thang)) return;
+    const d=+String(f).slice(8,10);
+    if(d>=1&&d<=maxD) newKh.add(ma);
+  });
   let s=0;
   recs.forEach(r=>{
+    if(!r.ma || !newKh.has(r.ma)) return;
     const mk=monthKeyFromIso(r.iso);
     if(!mk||!thangEq(mk,thang)) return;
     const d=+String(r.iso).slice(8,10);
@@ -1607,7 +1705,7 @@ function renderOverviewKhASection(alertData){
   html+=`</div>`;
   return html;
 }
-/** AM × N ngày gần nhất từ Banmoi (đã lọc KHM 30 ngày). */
+/** AM × N ngày gần nhất từ Banmoi. */
 function buildBanMoiDayMatrix(banmoi, nDays){
   return buildBanMoiAmCompare(banmoi, nDays||14, 0);
 }
@@ -4961,20 +5059,21 @@ function buildWeeklyReportData(){
   const wCmpCur = weekCompareCur || weekCur;
   const wCmpPrev = weekComparePrev || weekPrev;
 
-  // Ưu tiên bán mới theo tuần từ sheet Banmoi
-  const banmoiByWeek=buildBanMoiByWeek(banmoi);
-  const bmWeekCurKey=wCmpCur?(Object.keys(banmoiByWeek).find(k=>sameWeekKey(k,wCmpCur))||wCmpCur):'';
-  const bmWeekPrevKey=wCmpPrev?(Object.keys(banmoiByWeek).find(k=>sameWeekKey(k,wCmpPrev))||wCmpPrev):'';
+  // Ưu tiên bán mới theo tuần từ sheet Banmoi — khớp khoảng ngày tuần chọn (cột J)
+  const bmBundle=buildBanMoiWeekBundle(banmoi, wCmpCur, wCmpPrev);
+  const banmoiByWeek=bmBundle.byWeek||{};
+  const bmWeekCurKey=bmBundle.keyCur||'';
+  const bmWeekPrevKey=bmBundle.keyPrev||'';
   let banMoiWeekDt=0, banMoiWeekDtPrev=0;
-  if(Object.keys(banmoiByWeek).length && bmWeekCurKey){
-    const bmCur=banmoiByWeek[bmWeekCurKey]||{};
-    const bmPrev=banmoiByWeek[bmWeekPrevKey]||{};
+  if((bmBundle.bmCur&&((bmBundle.bmCur.volG||0)>0||(bmBundle.bmCur.dtBanMoi||0)>0||(bmBundle.bmCur.khG&&bmBundle.bmCur.khG.size))) || Object.keys(banmoiByWeek).length){
+    const bmCur=bmBundle.bmCur||{};
+    const bmPrev=bmBundle.bmPrev||{};
     banMoiWeekDt=bmCur.dtBanMoi||0;
     banMoiWeekDtPrev=bmPrev.dtBanMoi||0;
     wowBanMoi=pctWoWText(banMoiWeekDt, banMoiWeekDtPrev);
     slkhG=bmCur.khG?bmCur.khG.size:0;
     volG=Math.round(bmCur.volG||0);
-    volGSource=`Banmoi · Volume cột I · WEEKNUM(cột J;2) · tuần ${weekLabelShort(bmWeekCurKey||wCmpCur)}`;
+    volGSource=`Banmoi · SLKH theo Ngày LTC đầu tiên (cột C) ∈ tuần · Σ Volume cột I (đơn trong tuần)`;
     const amRank=buildAmBanMoiWeekRank(banmoiByWeek, bmWeekCurKey, bmWeekPrevKey, 5);
     topAmBanMoi=amRank.top.map(r=>[r.am, r.dt, r]);
     topAmBanMoiYeu=amRank.yeu;
@@ -5343,7 +5442,7 @@ ${(d.planRows||[]).map(docRowPlan).join('\n')}
  · Target giữ cũ = DT ${h('',d.thangPrevLabel)} (<b>${fmtVnd(d.targetGiuCu||0)}</b>) · Target bán mới = KPI CM − giữ cũ (<b>${fmtVnd(d.targetBanMoi||0)}</b>).
  · Cột <span class="red">MTD-1</span> = MTD cùng kỳ ${d.elapsed} ngày tháng trước (so sánh MoM).
  · So sánh giữ cũ: doanh thu từ <b>TotalKH</b> (A/BCD/EF) cùng kỳ ${d.elapsed} ngày, scale khớp LTC.
- · Bán mới (MTD / tuần / AM): nguồn sheet <b>Banmoi</b> (KHM · lấy TC / giao trả TC, cửa sổ 30 ngày).
+ · Bán mới (MTD / tuần / AM): nguồn sheet <b>Banmoi</b> · SLKH = KH có <b>Ngày LTC đầu tiên</b> trong tuần · Volume = Σ cột <b>Volume</b>.
  · Tăng/giảm sv ${h('',d.thangPrevLabel)}: so MTD với MTD cùng kỳ T-1.</p>
 
 <p><b>Tuần:</b> Doanh thu theo nhóm KH (5 tuần gần nhất · % = so với tuần liền trước)${d.weekCurIncomplete?` · <i>Comment &amp; số liệu so sánh dùng <b>${h('',d.weekCompareLabel)}</b> vs <b>${h('',d.weekComparePrevLabel)}</b> (đang ở ${h('',d.weekLabel)} — chưa so tuần đang chạy)</i>`:''}</p>
