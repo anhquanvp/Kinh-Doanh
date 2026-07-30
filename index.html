@@ -230,6 +230,20 @@ table.tbl-pro.compact td,table.tbl-pro.compact th{padding:5px 6px;font-size:11px
 .khA-trend-meta .avg{font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap}
 .khA-atrisk{color:var(--red);font-weight:800;font-variant-numeric:tabular-nums}
 .khA-spark{display:block}
+.khA-detail{margin-top:6px}
+.khA-detail>summary{cursor:pointer;font-size:11px;font-weight:600;color:var(--ghn-deep);list-style:none;user-select:none}
+.khA-detail>summary::-webkit-details-marker{display:none}
+.khA-detail>summary::before{content:'▸ ';font-size:10px}
+.khA-detail[open]>summary::before{content:'▾ '}
+.khA-detail-body{margin-top:8px;padding:10px 12px;background:#FAFBFC;border:1px solid var(--border-light);border-radius:8px}
+.khA-detail-meta{font-size:11px;color:var(--text-muted);margin-bottom:8px;line-height:1.45}
+.khA-detail-chart{overflow-x:auto;margin-bottom:8px}
+.khA-day-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.khA-day-tbl th,.khA-day-tbl td{padding:4px 6px;border-bottom:1px solid var(--border-light);text-align:right;white-space:nowrap}
+.khA-day-tbl th:first-child,.khA-day-tbl td:first-child{text-align:left}
+.khA-day-tbl th{color:var(--text-muted);font-weight:600}
+.khA-day-tbl td.zero{color:var(--text-muted)}
+.khA-day-tbl tr.stop td{background:rgba(220,38,38,.04)}
 
 @media(max-width:900px){.overview-split{grid-template-columns:1fr}.overview-half{border-right:none;border-bottom:1px solid var(--border-light)}.mission-strip{grid-template-columns:1fr 1fr}}
 .tabbar{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:14px;flex-wrap:wrap}
@@ -1527,16 +1541,29 @@ function lookupNhomKhByMa(totalKH){
   }
   return map;
 }
+/** Số ngày liên tiếp gần nhất không có đơn LTC (Volume = 0), tính từ ngày dữ liệu mới nhất. */
+function countLtcStopStreak(vols, fromIso, maxLookback){
+  let n=0, iso=fromIso;
+  const lim=Math.max(1, maxLookback||60);
+  for(let i=0;i<lim;i++){
+    const vol=(vols&&vols[iso])||0;
+    if(vol>0) break;
+    n++;
+    iso=isoShiftDays(iso,-1);
+  }
+  return n;
+}
 /**
- * KH nhóm A cần xử lý theo mẫu:
- * - Mini-chart: Volume Lấy TC 7 ngày
- * - Sụt giảm: TB đơn/ngày 7N giảm >30% vs 7N trước
- * - Ngưng Đơn: Volume Lấy TC ngày N-1 (ngày dữ liệu mới nhất) = 0
- * - Rớt hạng: hạng theo DT dự kiến tháng < hạng hiện tại (NhomKH)
- * - DT: MTD LTC
+ * KH nhóm A cần xử lý:
+ * - Nguồn: đơn LTC/ngày (Volume) + DT/ngày của KH
+ * - Sụt giảm X%: X = (TB7 trước − TB7 gần) ÷ TB7 trước; cảnh báo nếu X ≥ 30%
+ * - DT at-risk/tháng = (DT/ngày trước − DT/ngày gần) × 30
+ * - Ngừng hoạt động N ngày = số ngày liên tiếp gần nhất không có đơn LTC
+ * - Rớt hạng = hạng dự kiến cuối tháng < hạng hiện tại
+ * - Mini-chart: Volume LTC 14 ngày
  */
 function buildKhCanXuLy(khNhomA, totalKH, thang, monthProgress, dtNgay){
-  const empty={dayCur:'',dayPrev:'',weekday:'',rows:[],byAm:[],total:0,elapsed:0,totalDays:0};
+  const empty={dayCur:'',dayPrev:'',weekday:'',rows:[],byAm:[],total:0,elapsed:0,totalDays:0,last7:[],last14:[],prev7:[]};
   if(!khNhomA||khNhomA.length<2) return empty;
   const byCust=parseKhNhomAByCust(khNhomA);
   let maxIso='';
@@ -1558,9 +1585,11 @@ function buildKhCanXuLy(khNhomA, totalKH, thang, monthProgress, dtNgay){
   const totalDays=(monthProgress&&monthProgress.totalDays)||(p?daysInMonth(p.y,p.m):31);
   const dayNum=+maxIso.slice(8,10);
   const elapsed=Math.min(Math.max((monthProgress&&monthProgress.elapsed)||dayNum,1), totalDays);
-  const dayN1=maxIso; // ngày N-1 = ngày dữ liệu mới nhất
+  const dayN1=maxIso;
   const last7=isoEachDay(isoShiftDays(maxIso,-6), maxIso);
   const prev7=isoEachDay(isoShiftDays(maxIso,-13), isoShiftDays(maxIso,-7));
+  const last14=isoEachDay(isoShiftDays(maxIso,-13), maxIso);
+  const last30=isoEachDay(isoShiftDays(maxIso,-29), maxIso);
   const nhomByMa=lookupNhomKhByMa(totalKH);
 
   const rows=[];
@@ -1579,20 +1608,27 @@ function buildKhCanXuLy(khNhomA, totalKH, thang, monthProgress, dtNgay){
 
     const volSeries7=last7.map(iso=>(c.vols&&c.vols[iso])||0);
     const volSeriesPrev7=prev7.map(iso=>(c.vols&&c.vols[iso])||0);
-    const volSum7=volSeries7.reduce((s,v)=>s+v,0);
-    const volSumPrev7=volSeriesPrev7.reduce((s,v)=>s+v,0);
-    const avgVolDay=volSum7/7;
-    const avgVolDayPrev=volSumPrev7/7;
-    const pctVol=avgVolDayPrev>0?(avgVolDay-avgVolDayPrev)/avgVolDayPrev*100:(avgVolDay>0?100:0);
-    const sutGiam=avgVolDayPrev>0 && pctVol<=-30;
-    const volN1=(c.vols&&c.vols[dayN1])||0;
-    const ngungDon=volN1===0;
+    const volSeries14=last14.map(iso=>(c.vols&&c.vols[iso])||0);
+    const dtSeries7=last7.map(iso=>(c.dates&&c.dates[iso])||0);
+    const dtSeriesPrev7=prev7.map(iso=>(c.dates&&c.dates[iso])||0);
+    const avgVolDay=volSeries7.reduce((s,v)=>s+v,0)/7;
+    const avgVolDayPrev=volSeriesPrev7.reduce((s,v)=>s+v,0)/7;
+    // X% = (TB trước − TB gần) ÷ TB trước
+    const dropPct=avgVolDayPrev>0?(avgVolDayPrev-avgVolDay)/avgVolDayPrev*100:0;
+    const sutGiam=avgVolDayPrev>0 && dropPct>=30;
+
+    const avgDtDay=dtSeries7.reduce((s,v)=>s+v,0)/7;
+    const avgDtDayPrev=dtSeriesPrev7.reduce((s,v)=>s+v,0)/7;
+    // DT at-risk/tháng = (DT/ngày trước − DT/ngày gần) × 30
+    const dtAtRisk=Math.max(0, (avgDtDayPrev-avgDtDay)*30);
+
+    const stopDays=countLtcStopStreak(c.vols, dayN1, 60);
+    const ngungHoatDong=stopDays>=1;
 
     const projected=dtMtd/elapsed*totalDays;
     const projRank=rankFromMonthlyDt(projected);
     const nhomInfo=nhomByMa[c.ma]||{};
     const rawNhom=String(nhomInfo.raw||'').trim().toUpperCase();
-    // Hạng hiện tại: TotalKH (A1–A5) · nếu chỉ "A" → suy từ DT tháng trước · fallback A5
     let curRank='';
     if(/^A[1-5]$/.test(rawNhom) || /^[BCDEF]$/.test(rawNhom)){
       curRank=rawNhom;
@@ -1612,30 +1648,38 @@ function buildKhCanXuLy(khNhomA, totalKH, thang, monthProgress, dtNgay){
     }
     const rotHang=!!curRank && isRankDrop(curRank, projRank);
 
-    if(!sutGiam && !ngungDon && !rotHang) return;
+    if(!sutGiam && !ngungHoatDong && !rotHang) return;
 
     const signals=[];
-    if(sutGiam) signals.push('Sụt giảm');
-    if(ngungDon) signals.push('Ngừng ĐH');
+    if(sutGiam) signals.push(`Sụt giảm ${dropPct.toFixed(0)}%`);
+    if(ngungHoatDong) signals.push(`Ngừng ${stopDays} ngày`);
     if(rotHang) signals.push('Rớt hạng');
-    const mucDo=ngungDon?'Nguy kịch':'Cảnh báo';
+    const mucDo=stopDays>=3?'Nguy kịch':'Cảnh báo';
+
+    const dailyDetail=last30.map(iso=>({
+      iso,
+      vol:(c.vols&&c.vols[iso])||0,
+      dt:(c.dates&&c.dates[iso])||0
+    }));
 
     rows.push({
       ma:c.ma, ten:c.ten||c.ma||'—', am:c.am||'—',
       curRank, projRank, rotHang,
       hangLabel:rotHang?`${curRank} → ${projRank}`:curRank,
       mucDo, signals,
-      sutGiam, ngungDon,
-      volSeries7, avgVolDay, pctVol,
+      sutGiam, ngungHoatDong, stopDays, dropPct,
+      volSeries7, volSeries14, avgVolDay, avgVolDayPrev,
+      avgDtDay, avgDtDayPrev, dtAtRisk,
       dtMtd, projected,
-      dayN1, lastIso:c.lastIso||''
+      dayN1, lastIso:c.lastIso||'',
+      dailyDetail
     });
   });
 
   rows.sort((a,b)=>{
     if(a.mucDo!==b.mucDo) return a.mucDo==='Nguy kịch'?-1:1;
-    if(a.ngungDon!==b.ngungDon) return a.ngungDon?-1:1;
-    return (b.dtMtd||0)-(a.dtMtd||0);
+    if((b.stopDays||0)!==(a.stopDays||0)) return (b.stopDays||0)-(a.stopDays||0);
+    return (b.dtAtRisk||0)-(a.dtAtRisk||0);
   });
 
   const byAmMap={};
@@ -1647,7 +1691,7 @@ function buildKhCanXuLy(khNhomA, totalKH, thang, monthProgress, dtNgay){
 
   return {
     dayCur:dayN1, dayPrev:isoShiftDays(dayN1,-7), weekday:weekdayVi(dayN1),
-    last7, elapsed, totalDays,
+    last7, last14, prev7, elapsed, totalDays,
     rows, total:rows.length,
     byAm:Object.values(byAmMap).sort((a,b)=>b.customers.length-a.customers.length)
   };
@@ -2309,32 +2353,66 @@ function fmtVolDay(n){
   if(n==null||isNaN(n)) return '—';
   return (+n).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1});
 }
+/** Biểu đồ cột LTC/ngày (Volume) để kiểm chứng chi tiết theo ngày. */
+function ltcDayBarSvg(dailyDetail, w, h){
+  const rows=(dailyDetail||[]).slice();
+  if(!rows.length) return '';
+  const W=Math.max(w||Math.max(320, rows.length*14), rows.length*10);
+  const H=h||72;
+  const padT=6, padB=16, padL=2, padR=2;
+  const chartH=H-padT-padB;
+  const max=Math.max(...rows.map(r=>+r.vol||0), 1);
+  const gap=1;
+  const barW=Math.max(2, (W-padL-padR)/rows.length - gap);
+  const bars=rows.map((r,i)=>{
+    const v=+r.vol||0;
+    const x=padL+i*((W-padL-padR)/rows.length);
+    const bh=v<=0?0:(v/max)*chartH;
+    const y=padT+chartH-bh;
+    const fill=v<=0?'#FECACA':'#F97316';
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(bh,0).toFixed(1)}" fill="${fill}" rx="1"/>`;
+  }).join('');
+  const labels=[0, Math.floor((rows.length-1)/2), rows.length-1].filter((v,i,a)=>a.indexOf(v)===i)
+    .map(i=>{
+      const x=padL+i*((W-padL-padR)/rows.length)+barW/2;
+      return `<text x="${x.toFixed(1)}" y="${H-2}" text-anchor="middle" font-size="9" fill="#94A3B8">${docEsc(isoShort2(rows[i].iso))}</text>`;
+    }).join('');
+  return `<svg class="khA-day-chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="LTC theo ngày">${bars}${labels}</svg>`;
+}
 function renderOverviewKhASection(alertData){
   const d=alertData||{};
-  const badge=d.dayCur?`N-1 ${isoShort2(d.dayCur)} · TB Vol 7N`:'—';
+  const badge=d.dayCur?`N-1 ${isoShort2(d.dayCur)} · Vol 14N`:'—';
   let html=`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--red)">⚠️</div>Khách hàng cần xử lý</div><span class="badge">${fmt(d.total||0)} KH · ${badge}</span></div>`;
   if(!d.total){
-    html+=`<div class="section-note">✅ Không có KH nhóm A cần xử lý (Sụt giảm / Ngừng ĐH / Rớt hạng).</div></div>`;
+    html+=`<div class="section-note">✅ Không có KH nhóm A cần xử lý (Sụt giảm / Ngừng hoạt động / Rớt hạng).</div></div>`;
     return html;
   }
-  html+=`<div class="data-banner" style="margin:12px 16px 0">Vùng / Team: <b>TNT</b> · Mini-chart = Volume Lấy TC 7 ngày · DT = MTD LTC · Hạng dự kiến = (MTD ÷ ${d.elapsed||'—'}) × ${d.totalDays||'—'} ngày</div>`;
+  html+=`<div class="data-banner" style="margin:12px 16px 0">Vùng / Team: <b>TNT</b> · Mini-chart = đơn LTC 14 ngày · DT at-risk = (DT/ngày trước − DT/ngày gần) × 30 · X% = (TB7 trước − TB7 gần) ÷ TB7 trước · Hạng dự kiến = (MTD ÷ ${d.elapsed||'—'}) × ${d.totalDays||'—'} ngày</div>`;
   html+=`<div class="table-wrap" style="margin-top:8px"><table class="tbl-pro khA-need-tbl"><thead><tr>
     <th>Khách hàng</th><th>Hạng</th><th>Mức độ</th><th>Tín hiệu</th>
     <th>Đơn tạo (xu hướng)</th><th class="num">DT at-risk / TH</th><th>Người chăm</th><th>Team</th>
   </tr></thead><tbody>`;
 
   d.rows.forEach(r=>{
-    const spark=sparkAreaSvg(r.volSeries7||[], 88, 28, true);
-    const pctCls=r.pctVol<=-30?'down':(r.pctVol>=0?'up':'down');
-    const pctTxt=(r.pctVol>=0?'↑ +':'↓ ')+Math.abs(r.pctVol).toFixed(0)+'%';
+    const spark=sparkAreaSvg(r.volSeries14||r.volSeries7||[], 110, 28, true);
+    const drop=+(r.dropPct||0);
+    const pctCls=drop>=30?'down':(drop<=0?'up':'down');
+    const pctTxt=drop<=0?`↑ +${Math.abs(drop).toFixed(0)}%`:`↓ ${drop.toFixed(0)}%`;
     const hangHtml=r.rotHang
       ? `<span class="khA-hang drop">${docEsc(r.curRank)} → ${docEsc(r.projRank)} <span class="khA-hang-arrow">↓</span></span>`
       : `<span class="khA-hang">${docEsc(r.hangLabel||r.curRank||'—')}</span>`;
     const mucCls=r.mucDo==='Nguy kịch'?'crit':'warn';
     const sigHtml=(r.signals||[]).map(s=>{
-      const cls=s==='Ngừng ĐH'?'sig-stop':(s==='Rớt hạng'?'sig-drop':'sig-down');
+      const cls=/^Ngừng/.test(s)?'sig-stop':(s==='Rớt hạng'?'sig-drop':'sig-down');
       return `<span class="khA-sig ${cls}">${docEsc(s)}</span>`;
     }).join(' ');
+    const detailChart=ltcDayBarSvg(r.dailyDetail||[], Math.max(360,(r.dailyDetail||[]).length*14), 72);
+    const dayRows=[...(r.dailyDetail||[])].reverse().map(day=>{
+      const vol=+day.vol||0;
+      const stopCls=vol<=0?'stop':'';
+      const zeroCls=vol<=0?'zero':'';
+      return `<tr class="${stopCls}"><td>${docEsc(isoShort2(day.iso))}</td><td class="${zeroCls}">${fmt(vol)}</td><td>${fmtVnd(day.dt||0)}</td></tr>`;
+    }).join('');
     html+=`<tr class="${r.mucDo==='Nguy kịch'?'row-danger':'row-warn'}">
       <td><div class="lbl-name">${docEsc(r.ten)}</div><div class="lbl-sub">ID ${docEsc(r.ma)}</div></td>
       <td>${hangHtml}</td>
@@ -2348,17 +2426,26 @@ function renderOverviewKhASection(alertData){
             <span class="trend-tag ${pctCls}">${pctTxt}</span>
           </div>
         </div>
+        <details class="khA-detail">
+          <summary>Xem chi tiết theo ngày</summary>
+          <div class="khA-detail-body">
+            <div class="khA-detail-meta">TB gần (7N): <b>${fmtVolDay(r.avgVolDay)}</b> đơn/ngày · TB trước đó (7N): <b>${fmtVolDay(r.avgVolDayPrev)}</b> · X = <b>${drop.toFixed(0)}%</b><br>
+            DT/ngày gần: <b>${fmtVnd(r.avgDtDay||0)}</b> · DT/ngày trước: <b>${fmtVnd(r.avgDtDayPrev||0)}</b> · At-risk/tháng: <b>${fmtVnd(r.dtAtRisk||0)}</b>${r.ngungHoatDong?` · Ngừng hoạt động: <b>${r.stopDays} ngày</b>`:''}</div>
+            <div class="khA-detail-chart">${detailChart}</div>
+            <div class="table-wrap"><table class="khA-day-tbl"><thead><tr><th>Ngày</th><th>Đơn LTC</th><th>DT</th></tr></thead><tbody>${dayRows}</tbody></table></div>
+          </div>
+        </details>
       </td>
-      <td class="num"><span class="khA-atrisk">${fmtVnd(r.dtMtd)}</span></td>
+      <td class="num"><span class="khA-atrisk">${fmtVnd(r.dtAtRisk||0)}</span></td>
       <td><div class="lbl-name">${docEsc(r.am)}</div><div class="lbl-sub">—</div></td>
       <td>TNT</td>
     </tr>`;
   });
   html+=`</tbody></table></div>`;
-  const nStop=d.rows.filter(r=>r.ngungDon).length;
+  const nStop=d.rows.filter(r=>r.ngungHoatDong).length;
   const nDrop=d.rows.filter(r=>r.sutGiam).length;
   const nRank=d.rows.filter(r=>r.rotHang).length;
-  html+=analysisQuick(`<b>${d.total}</b> KH cần xử lý · Ngừng ĐH: <b>${nStop}</b> · Sụt giảm (&gt;30% TB Vol 7N): <b>${nDrop}</b> · Rớt hạng: <b>${nRank}</b> · nguồn sheet <b>khách hàng nhóm A</b> + TotalKH.`);
+  html+=analysisQuick(`<b>${d.total}</b> KH cần xử lý · Ngừng hoạt động: <b>${nStop}</b> · Sụt giảm (X≥30%): <b>${nDrop}</b> · Rớt hạng: <b>${nRank}</b> · nguồn đơn LTC/ngày sheet <b>khách hàng nhóm A</b> + TotalKH.`);
   html+=`</div>`;
   return html;
 }
