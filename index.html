@@ -1541,26 +1541,22 @@ function lookupNhomKhByMa(totalKH){
   }
   return map;
 }
-/** Số ngày liên tiếp gần nhất không có đơn LTC (Volume = 0), tính từ ngày dữ liệu mới nhất. */
+/** Số ngày liên tiếp gần nhất không có đơn (Volume = 0 và DT = 0), từ ngày dữ liệu mới nhất. */
 function countLtcStopStreak(vols, fromIso, maxLookback){
+  return countStopStreak(vols, null, fromIso, maxLookback);
+}
+/**
+ * Chuỗi ngày không lên đơn: ngày “có hoạt động” = Volume > 0 hoặc DT > 0
+ * (đồng bộ với bảng chi tiết — tránh báo 60N khi Volume trống nhưng vẫn có DT).
+ */
+function countStopStreak(vols, dates, fromIso, maxLookback){
   let n=0, iso=fromIso;
-  const lim=Math.max(1, maxLookback||60);
+  const lim=Math.max(1, maxLookback||90);
+  if(!iso) return 0;
   for(let i=0;i<lim;i++){
     const vol=(vols&&vols[iso])||0;
-    if(vol>0) break;
-    n++;
-    iso=isoShiftDays(iso,-1);
-  }
-  return n;
-}
-/** Chuỗi ngày không lên đơn — ưu tiên Volume, fallback DT = 0. */
-function countStopStreak(vols, dates, fromIso, maxLookback){
-  const hasVol=vols&&Object.keys(vols).some(iso=>(vols[iso]||0)>0);
-  if(hasVol) return countLtcStopStreak(vols, fromIso, maxLookback);
-  let n=0, iso=fromIso;
-  const lim=Math.max(1, maxLookback||60);
-  for(let i=0;i<lim;i++){
-    if(((dates&&dates[iso])||0)>0) break;
+    const dt=(dates&&dates[iso])||0;
+    if(vol>0 || dt>0) break;
     n++;
     iso=isoShiftDays(iso,-1);
   }
@@ -1635,7 +1631,7 @@ function buildKhCanXuLy(khNhomA, totalKH, thang, monthProgress, dtNgay){
     // DT at-risk/tháng = (DT/ngày trước − DT/ngày gần) × 30
     const dtAtRisk=Math.max(0, (avgDtDayPrev-avgDtDay)*30);
 
-    const stopDays=countLtcStopStreak(c.vols, dayN1, 60);
+    const stopDays=countStopStreak(c.vols, c.dates, dayN1, 90);
     const ngungHoatDong=stopDays>=1;
 
     const projected=dtMtd/elapsed*totalDays;
@@ -2342,7 +2338,7 @@ function buildKhNoOrder3d(totalKH, thang, nDays, khNhomA){
     const avgDtDay=dtSeries7.reduce((s,v)=>s+v,0)/7;
     const avgDtDayPrev=dtSeriesPrev7.reduce((s,v)=>s+v,0)/7;
     const dtAtRisk=Math.max(0, (avgDtDayPrev-avgDtDay)*30);
-    const stopDays=countStopStreak(vols, datesMerged, maxIso, 60);
+    const stopDays=countStopStreak(vols, datesMerged, maxIso, 90);
     const dailyDetail=last30.map(iso=>({
       iso,
       vol:volAt(iso),
