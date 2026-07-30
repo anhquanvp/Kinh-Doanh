@@ -1553,6 +1553,19 @@ function countLtcStopStreak(vols, fromIso, maxLookback){
   }
   return n;
 }
+/** Chuỗi ngày không lên đơn — ưu tiên Volume, fallback DT = 0. */
+function countStopStreak(vols, dates, fromIso, maxLookback){
+  const hasVol=vols&&Object.keys(vols).some(iso=>(vols[iso]||0)>0);
+  if(hasVol) return countLtcStopStreak(vols, fromIso, maxLookback);
+  let n=0, iso=fromIso;
+  const lim=Math.max(1, maxLookback||60);
+  for(let i=0;i<lim;i++){
+    if((dates&&dates[iso])||0)>0) break;
+    n++;
+    iso=isoShiftDays(iso,-1);
+  }
+  return n;
+}
 /**
  * KH nhóm A cần xử lý:
  * - Nguồn: đơn LTC/ngày (Volume) + DT/ngày của KH
@@ -2268,15 +2281,16 @@ function renderOverviewBanMoiDaySection(bm){
   html+=`</div>`;
   return html;
 }
-function buildKhNoOrder3d(totalKH, thang, nDays){
+function buildKhNoOrder3d(totalKH, thang, nDays, khNhomA){
   const days=Math.max(1, nDays||3);
-  const empty={maxIso:'', lastN:[], rows:[], byAm:[], total:0, byGrp:{A:0,BCD:0}};
+  const empty={maxIso:'', lastN:[], last14:[], last30:[], rows:[], byAm:[], total:0, byGrp:{A:0,BCD:0}, elapsed:0, totalDays:0};
   if(!totalKH||totalKH.length<2) return empty;
   const h=totalKH[0];
   const iMa=idxOf(h,'MaKH'), iTen=idxOf(h,'TenKH'), iNhom=idxOf(h,'Nhom'), iVung=idxOf(h,'Vung');
   const iNgayChuan=idxNgayChuanHoa(h), iNgay=idxOf(h,'Ngay');
   const iDT=idxOf(h,'DT'), iMtd=idxOf(h,'MTD'), iAM=idxOf(h,'AM Chuẩn');
   const dayDt=raw=>{ const d=+raw||0; return d>200e6?d/1000:d; };
+  const khVolMap=khNhomA&&khNhomA.length>1?parseKhNhomAByCust(khNhomA):{};
   let maxIso='';
   const byCust={};
   for(let i=1;i<totalKH.length;i++){
@@ -2290,10 +2304,11 @@ function buildKhNoOrder3d(totalKH, thang, nDays){
     const mk=monthKeyFromIso(iso);
     if(!mk||!thangEq(mk,thang)) continue;
     if(iso>maxIso) maxIso=iso;
-    if(!byCust[ma]) byCust[ma]={ma,ten:(r[iTen]||'').trim(),am:(iAM>=0?(r[iAM]||'').trim():''),grp,dates:{},mtd:0,lastIso:''};
+    if(!byCust[ma]) byCust[ma]={ma,ten:(r[iTen]||'').trim(),am:(iAM>=0?(r[iAM]||'').trim():''),grp,rawNhom:String(r[iNhom]||'').trim(),dates:{},mtd:0,lastIso:''};
     byCust[ma].ten=(r[iTen]||'').trim()||byCust[ma].ten;
     byCust[ma].am=(iAM>=0?(r[iAM]||'').trim():'')||byCust[ma].am;
     byCust[ma].grp=grp||byCust[ma].grp;
+    byCust[ma].rawNhom=String(r[iNhom]||'').trim()||byCust[ma].rawNhom;
     const dt=dayDt(parseVNNum(r[iDT]));
     const mtd=iMtd>=0?parseMtdNum(r[iMtd]):0;
     byCust[ma].dates[iso]=(byCust[ma].dates[iso]||0)+dt;
@@ -2302,18 +2317,53 @@ function buildKhNoOrder3d(totalKH, thang, nDays){
   }
   if(!maxIso) return empty;
   const lastN=isoEachDay(isoShiftDays(maxIso,-(days-1)), maxIso);
+  const last7=isoEachDay(isoShiftDays(maxIso,-6), maxIso);
+  const prev7=isoEachDay(isoShiftDays(maxIso,-13), isoShiftDays(maxIso,-7));
+  const last14=isoEachDay(isoShiftDays(maxIso,-13), maxIso);
+  const last30=isoEachDay(isoShiftDays(maxIso,-29), maxIso);
   const rows=[];
   Object.values(byCust).forEach(c=>{
     const mtd=c.mtd>0?c.mtd:Object.values(c.dates).reduce((s,v)=>s+v,0);
     if(mtd<=0) return;
     const dtWin=lastN.reduce((s,iso)=>s+(c.dates[iso]||0),0);
     if(dtWin>0) return;
-    rows.push({ma:c.ma, ten:c.ten||c.ma||'—', am:c.am||'—', grp:c.grp||'—', lastIso:c.lastIso||'', mtd});
+    const ka=khVolMap[c.ma]||{};
+    const vols=ka.vols||{};
+    const datesMerged={...(ka.dates||{}), ...c.dates};
+    const volAt=(iso)=>{ const v=(vols[iso]||0); return v>0?v:((datesMerged[iso]||0)>0?1:0); };
+    const volSeries7=last7.map(volAt);
+    const volSeriesPrev7=prev7.map(volAt);
+    const volSeries14=last14.map(volAt);
+    const dtSeries7=last7.map(iso=>(datesMerged[iso]||0));
+    const dtSeriesPrev7=prev7.map(iso=>(datesMerged[iso]||0));
+    const avgVolDay=volSeries7.reduce((s,v)=>s+v,0)/7;
+    const avgVolDayPrev=volSeriesPrev7.reduce((s,v)=>s+v,0)/7;
+    const dropPct=avgVolDayPrev>0?(avgVolDayPrev-avgVolDay)/avgVolDayPrev*100:0;
+    const avgDtDay=dtSeries7.reduce((s,v)=>s+v,0)/7;
+    const avgDtDayPrev=dtSeriesPrev7.reduce((s,v)=>s+v,0)/7;
+    const dtAtRisk=Math.max(0, (avgDtDayPrev-avgDtDay)*30);
+    const stopDays=countStopStreak(vols, datesMerged, maxIso, 60);
+    const dailyDetail=last30.map(iso=>({
+      iso,
+      vol:volAt(iso),
+      dt:(datesMerged[iso]||0)
+    }));
+    const rankLabel=normalizeRankCode(c.rawNhom)||c.grp||'—';
+    rows.push({
+      ma:c.ma, ten:c.ten||c.ma||'—', am:c.am||'—', grp:c.grp||'—',
+      curRank:rankLabel, hangLabel:rankLabel, rotHang:false,
+      mucDo:stopDays>=3?'Nguy kịch':'Cảnh báo',
+      signals:[`Ngừng ${stopDays} ngày`],
+      ngungHoatDong:true, stopDays, dropPct, sutGiam:false,
+      volSeries7, volSeries14, avgVolDay, avgVolDayPrev,
+      avgDtDay, avgDtDayPrev, dtAtRisk,
+      dtMtd:mtd, lastIso:c.lastIso||'', dailyDetail
+    });
   });
   rows.sort((a,b)=>{
-    if(a.grp!==b.grp) return a.grp==='A'?-1:1;
-    if(a.am!==b.am) return a.am.localeCompare(b.am,'vi');
-    return (a.ten||'').localeCompare(b.ten||'','vi');
+    if(a.mucDo!==b.mucDo) return a.mucDo==='Nguy kịch'?-1:1;
+    if((b.stopDays||0)!==(a.stopDays||0)) return (b.stopDays||0)-(a.stopDays||0);
+    return (b.dtAtRisk||0)-(a.dtAtRisk||0);
   });
   const byAmMap={}, byGrp={A:0,BCD:0};
   rows.forEach(r=>{
@@ -2321,33 +2371,105 @@ function buildKhNoOrder3d(totalKH, thang, nDays){
     if(!byAmMap[r.am]) byAmMap[r.am]={am:r.am, customers:[]};
     byAmMap[r.am].customers.push(r);
   });
-  return {maxIso, lastN, rows, total:rows.length, byGrp, byAm:Object.values(byAmMap).sort((a,b)=>b.customers.length-a.customers.length)};
+  return {
+    maxIso, lastN, last14, last30, dayCur:maxIso,
+    rows, total:rows.length, byGrp,
+    byAm:Object.values(byAmMap).sort((a,b)=>b.customers.length-a.customers.length)
+  };
+}
+function renderKhNeedRow(r, opts){
+  const o=opts||{};
+  const spark=sparkAreaSvg(r.volSeries14||r.volSeries7||[], 110, 28, true);
+  const drop=+(r.dropPct||0);
+  const pctCls=drop>=30?'down':(drop<=0?'up':'down');
+  const pctTxt=drop<=0?`↑ +${Math.abs(drop).toFixed(0)}%`:`↓ ${drop.toFixed(0)}%`;
+  const hangHtml=r.rotHang
+    ? `<span class="khA-hang drop">${docEsc(r.curRank)} → ${docEsc(r.projRank)} <span class="khA-hang-arrow">↓</span></span>`
+    : `<span class="khA-hang">${docEsc(r.hangLabel||r.curRank||r.grp||'—')}</span>`;
+  const mucCls=r.mucDo==='Nguy kịch'?'crit':'warn';
+  const sigHtml=(r.signals||[]).map(s=>{
+    const cls=/^Ngừng/.test(s)?'sig-stop':(s==='Rớt hạng'?'sig-drop':'sig-down');
+    return `<span class="khA-sig ${cls}">${docEsc(s)}</span>`;
+  }).join(' ');
+  const detailChart=ltcDayBarSvg(r.dailyDetail||[], Math.max(360,(r.dailyDetail||[]).length*14), 72);
+  const dayRows=[...(r.dailyDetail||[])].reverse().map(day=>{
+    const vol=+day.vol||0;
+    const stopCls=vol<=0?'stop':'';
+    const zeroCls=vol<=0?'zero':'';
+    return `<tr class="${stopCls}"><td>${docEsc(isoShort2(day.iso))}</td><td class="${zeroCls}">${fmt(vol)}</td><td>${fmtVnd(day.dt||0)}</td></tr>`;
+  }).join('');
+  const subLbl=o.subLabel||(r.grp&&r.grp!=='A'?`ID ${docEsc(r.ma)} · ${nhomTag(r.grp)}`:`ID ${docEsc(r.ma)}`);
+  const dtCell=o.dtCol==='mtd'
+    ? `<span class="khA-atrisk">${fmtVnd(r.dtMtd||0)}</span>`
+    : `<span class="khA-atrisk">${fmtVnd(r.dtAtRisk||0)}</span>`;
+  return `<tr class="${r.mucDo==='Nguy kịch'?'row-danger':'row-warn'}">
+    <td><div class="lbl-name">${docEsc(r.ten)}</div><div class="lbl-sub">${subLbl}</div></td>
+    <td>${hangHtml}</td>
+    <td><span class="khA-muc ${mucCls}"><span class="dot"></span>${docEsc(r.mucDo)}</span></td>
+    <td><div class="khA-sig-wrap">${sigHtml||'—'}</div></td>
+    <td>
+      <div class="khA-trend">
+        <div class="khA-spark-wrap">${spark||''}</div>
+        <div class="khA-trend-meta">
+          <div class="avg">${fmtVolDay(r.avgVolDay)} đơn/ngày</div>
+          <span class="trend-tag ${pctCls}">${pctTxt}</span>
+        </div>
+      </div>
+      <details class="khA-detail">
+        <summary>Xem chi tiết theo ngày</summary>
+        <div class="khA-detail-body">
+          <div class="khA-detail-meta">TB gần (7N): <b>${fmtVolDay(r.avgVolDay)}</b> đơn/ngày · TB trước đó (7N): <b>${fmtVolDay(r.avgVolDayPrev)}</b> · X = <b>${drop.toFixed(0)}%</b><br>
+          DT/ngày gần: <b>${fmtVnd(r.avgDtDay||0)}</b> · DT/ngày trước: <b>${fmtVnd(r.avgDtDayPrev||0)}</b> · At-risk/tháng: <b>${fmtVnd(r.dtAtRisk||0)}</b>${r.ngungHoatDong?` · Ngừng hoạt động: <b>${r.stopDays} ngày</b>`:''}${r.lastIso?` · DT cuối: <b>${isoShort2(r.lastIso)}</b>`:''}</div>
+          <div class="khA-detail-chart">${detailChart}</div>
+          <div class="table-wrap"><table class="khA-day-tbl"><thead><tr><th>Ngày</th><th>Đơn LTC</th><th>DT</th></tr></thead><tbody>${dayRows}</tbody></table></div>
+        </div>
+      </details>
+    </td>
+    <td class="num">${dtCell}</td>
+    <td><div class="lbl-name">${docEsc(r.am)}</div><div class="lbl-sub">—</div></td>
+    <td>TNT</td>
+  </tr>`;
+}
+function renderKhNeedTable(d, opts){
+  const o=Object.assign({
+    title:'Khách hàng cần xử lý',
+    icon:'⚠️',
+    iconBg:'var(--red)',
+    badge:'',
+    emptyMsg:'✅ Không có KH cần xử lý.',
+    banner:'',
+    footer:'',
+    dtColLabel:'DT at-risk / TH',
+    rowOpts:{}
+  }, opts||{});
+  let html=`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon" style="background:${o.iconBg}">${o.icon}</div>${docEsc(o.title)}</div><span class="badge">${o.badge||fmt(d.total||0)+' KH'}</span></div>`;
+  if(!d.total){
+    html+=`<div class="section-note">${o.emptyMsg}</div></div>`;
+    return html;
+  }
+  if(o.banner) html+=`<div class="data-banner" style="margin:12px 16px 0">${o.banner}</div>`;
+  html+=`<div class="table-wrap" style="margin-top:8px"><table class="tbl-pro khA-need-tbl"><thead><tr>
+    <th>Khách hàng</th><th>Hạng</th><th>Mức độ</th><th>Tín hiệu</th>
+    <th>Đơn tạo (xu hướng)</th><th class="num">${docEsc(o.dtColLabel)}</th><th>Người chăm</th><th>Team</th>
+  </tr></thead><tbody>`;
+  (d.rows||[]).forEach(r=>{ html+=renderKhNeedRow(r, o.rowOpts); });
+  html+=`</tbody></table></div>`;
+  if(o.footer) html+=analysisQuick(o.footer);
+  html+=`</div>`;
+  return html;
 }
 function renderOverviewNoOrder3dSection(data){
   const d=data||{};
   const span=(d.lastN&&d.lastN.length)?`${isoShort2(d.lastN[0])} → ${isoShort2(d.lastN[d.lastN.length-1])}`:'—';
-  let html=`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--red)">🛑</div>KH A + BCD — 3 ngày không lên đơn</div><span class="badge">${span}</span></div>`;
-  if(!d.total){
-    html+=`<div class="section-note">✅ Không có KH nhóm A/BCD nào đã có DT tháng này mà không lên đơn trong 3 ngày gần nhất.</div></div>`;
-    return html;
-  }
-  html+=`<div class="data-banner" style="margin:12px 16px 0">📅 Cửa sổ <b>3 ngày</b> (${span}) · KH A/BCD đã có DT MTD · A: <b>${d.byGrp.A||0}</b> · BCD: <b>${d.byGrp.BCD||0}</b></div>`;
-  html+=`<div class="table-wrap" style="margin-top:12px"><table class="tbl-pro compact"><thead><tr>
-    <th style="width:36px">#</th><th>Tên shop</th><th>AM</th><th>Nhóm</th><th>Ngày DT cuối</th><th class="num">MTD</th>
-  </tr></thead><tbody>`;
-  d.rows.forEach((r,i)=>{
-    html+=`<tr class="row-warn"><td><span class="rank-num">${i+1}</span></td>
-      <td><span class="lbl-name">${r.ten}</span></td>
-      <td>${r.am}</td>
-      <td>${nhomTag(r.grp)}</td>
-      <td>${r.lastIso?isoShort2(r.lastIso):'—'}</td>
-      <td class="num">${fmtVndCell(r.mtd)}</td></tr>`;
-  });
-  html+=`</tbody></table></div>`;
   const topAm=(d.byAm||[]).slice(0,3).map(g=>`${g.am} (${g.customers.length})`).join(', ')||'—';
-  html+=analysisQuick(`<b>${d.total}</b> KH A/BCD không lên đơn 3 ngày · AM nhiều nhất: <b>${topAm}</b>.`);
-  html+=`</div>`;
-  return html;
+  return renderKhNeedTable(d, {
+    title:'KH A + BCD — 3 ngày không lên đơn',
+    icon:'🛑',
+    badge:span,
+    emptyMsg:'✅ Không có KH nhóm A/BCD nào đã có DT tháng này mà không lên đơn trong 3 ngày gần nhất.',
+    banner:`📅 Cửa sổ <b>3 ngày</b> (${span}) · KH A/BCD đã có DT MTD · A: <b>${d.byGrp&&d.byGrp.A||0}</b> · BCD: <b>${d.byGrp&&d.byGrp.BCD||0}</b> · Mini-chart = đơn LTC 14 ngày · DT at-risk = (DT/ngày trước − DT/ngày gần) × 30`,
+    footer:`<b>${d.total}</b> KH A/BCD không lên đơn 3 ngày · AM nhiều nhất: <b>${topAm}</b> · nguồn <b>TotalKH</b> + sheet <b>khách hàng nhóm A</b>.`
+  });
 }
 function fmtVolDay(n){
   if(n==null||isNaN(n)) return '—';
@@ -2381,73 +2503,18 @@ function ltcDayBarSvg(dailyDetail, w, h){
 }
 function renderOverviewKhASection(alertData){
   const d=alertData||{};
-  const badge=d.dayCur?`N-1 ${isoShort2(d.dayCur)} · Vol 14N`:'—';
-  let html=`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--red)">⚠️</div>Khách hàng cần xử lý</div><span class="badge">${fmt(d.total||0)} KH · ${badge}</span></div>`;
-  if(!d.total){
-    html+=`<div class="section-note">✅ Không có KH nhóm A cần xử lý (Sụt giảm / Ngừng hoạt động / Rớt hạng).</div></div>`;
-    return html;
-  }
-  html+=`<div class="data-banner" style="margin:12px 16px 0">Vùng / Team: <b>TNT</b> · Mini-chart = đơn LTC 14 ngày · DT at-risk = (DT/ngày trước − DT/ngày gần) × 30 · X% = (TB7 trước − TB7 gần) ÷ TB7 trước · Hạng dự kiến = (MTD ÷ ${d.elapsed||'—'}) × ${d.totalDays||'—'} ngày</div>`;
-  html+=`<div class="table-wrap" style="margin-top:8px"><table class="tbl-pro khA-need-tbl"><thead><tr>
-    <th>Khách hàng</th><th>Hạng</th><th>Mức độ</th><th>Tín hiệu</th>
-    <th>Đơn tạo (xu hướng)</th><th class="num">DT at-risk / TH</th><th>Người chăm</th><th>Team</th>
-  </tr></thead><tbody>`;
-
-  d.rows.forEach(r=>{
-    const spark=sparkAreaSvg(r.volSeries14||r.volSeries7||[], 110, 28, true);
-    const drop=+(r.dropPct||0);
-    const pctCls=drop>=30?'down':(drop<=0?'up':'down');
-    const pctTxt=drop<=0?`↑ +${Math.abs(drop).toFixed(0)}%`:`↓ ${drop.toFixed(0)}%`;
-    const hangHtml=r.rotHang
-      ? `<span class="khA-hang drop">${docEsc(r.curRank)} → ${docEsc(r.projRank)} <span class="khA-hang-arrow">↓</span></span>`
-      : `<span class="khA-hang">${docEsc(r.hangLabel||r.curRank||'—')}</span>`;
-    const mucCls=r.mucDo==='Nguy kịch'?'crit':'warn';
-    const sigHtml=(r.signals||[]).map(s=>{
-      const cls=/^Ngừng/.test(s)?'sig-stop':(s==='Rớt hạng'?'sig-drop':'sig-down');
-      return `<span class="khA-sig ${cls}">${docEsc(s)}</span>`;
-    }).join(' ');
-    const detailChart=ltcDayBarSvg(r.dailyDetail||[], Math.max(360,(r.dailyDetail||[]).length*14), 72);
-    const dayRows=[...(r.dailyDetail||[])].reverse().map(day=>{
-      const vol=+day.vol||0;
-      const stopCls=vol<=0?'stop':'';
-      const zeroCls=vol<=0?'zero':'';
-      return `<tr class="${stopCls}"><td>${docEsc(isoShort2(day.iso))}</td><td class="${zeroCls}">${fmt(vol)}</td><td>${fmtVnd(day.dt||0)}</td></tr>`;
-    }).join('');
-    html+=`<tr class="${r.mucDo==='Nguy kịch'?'row-danger':'row-warn'}">
-      <td><div class="lbl-name">${docEsc(r.ten)}</div><div class="lbl-sub">ID ${docEsc(r.ma)}</div></td>
-      <td>${hangHtml}</td>
-      <td><span class="khA-muc ${mucCls}"><span class="dot"></span>${docEsc(r.mucDo)}</span></td>
-      <td><div class="khA-sig-wrap">${sigHtml||'—'}</div></td>
-      <td>
-        <div class="khA-trend">
-          <div class="khA-spark-wrap">${spark||''}</div>
-          <div class="khA-trend-meta">
-            <div class="avg">${fmtVolDay(r.avgVolDay)} đơn/ngày</div>
-            <span class="trend-tag ${pctCls}">${pctTxt}</span>
-          </div>
-        </div>
-        <details class="khA-detail">
-          <summary>Xem chi tiết theo ngày</summary>
-          <div class="khA-detail-body">
-            <div class="khA-detail-meta">TB gần (7N): <b>${fmtVolDay(r.avgVolDay)}</b> đơn/ngày · TB trước đó (7N): <b>${fmtVolDay(r.avgVolDayPrev)}</b> · X = <b>${drop.toFixed(0)}%</b><br>
-            DT/ngày gần: <b>${fmtVnd(r.avgDtDay||0)}</b> · DT/ngày trước: <b>${fmtVnd(r.avgDtDayPrev||0)}</b> · At-risk/tháng: <b>${fmtVnd(r.dtAtRisk||0)}</b>${r.ngungHoatDong?` · Ngừng hoạt động: <b>${r.stopDays} ngày</b>`:''}</div>
-            <div class="khA-detail-chart">${detailChart}</div>
-            <div class="table-wrap"><table class="khA-day-tbl"><thead><tr><th>Ngày</th><th>Đơn LTC</th><th>DT</th></tr></thead><tbody>${dayRows}</tbody></table></div>
-          </div>
-        </details>
-      </td>
-      <td class="num"><span class="khA-atrisk">${fmtVnd(r.dtAtRisk||0)}</span></td>
-      <td><div class="lbl-name">${docEsc(r.am)}</div><div class="lbl-sub">—</div></td>
-      <td>TNT</td>
-    </tr>`;
+  const badge=d.dayCur?`${fmt(d.total||0)} KH · N-1 ${isoShort2(d.dayCur)} · Vol 14N`:'—';
+  const nStop=(d.rows||[]).filter(r=>r.ngungHoatDong).length;
+  const nDrop=(d.rows||[]).filter(r=>r.sutGiam).length;
+  const nRank=(d.rows||[]).filter(r=>r.rotHang).length;
+  return renderKhNeedTable(d, {
+    title:'Khách hàng cần xử lý',
+    icon:'⚠️',
+    badge,
+    emptyMsg:'✅ Không có KH nhóm A cần xử lý (Sụt giảm / Ngừng hoạt động / Rớt hạng).',
+    banner:`Vùng / Team: <b>TNT</b> · Mini-chart = đơn LTC 14 ngày · DT at-risk = (DT/ngày trước − DT/ngày gần) × 30 · X% = (TB7 trước − TB7 gần) ÷ TB7 trước · Hạng dự kiến = (MTD ÷ ${d.elapsed||'—'}) × ${d.totalDays||'—'} ngày`,
+    footer:`<b>${d.total}</b> KH cần xử lý · Ngừng hoạt động: <b>${nStop}</b> · Sụt giảm (X≥30%): <b>${nDrop}</b> · Rớt hạng: <b>${nRank}</b> · nguồn đơn LTC/ngày sheet <b>khách hàng nhóm A</b> + TotalKH.`
   });
-  html+=`</tbody></table></div>`;
-  const nStop=d.rows.filter(r=>r.ngungHoatDong).length;
-  const nDrop=d.rows.filter(r=>r.sutGiam).length;
-  const nRank=d.rows.filter(r=>r.rotHang).length;
-  html+=analysisQuick(`<b>${d.total}</b> KH cần xử lý · Ngừng hoạt động: <b>${nStop}</b> · Sụt giảm (X≥30%): <b>${nDrop}</b> · Rớt hạng: <b>${nRank}</b> · nguồn đơn LTC/ngày sheet <b>khách hàng nhóm A</b> + TotalKH.`);
-  html+=`</div>`;
-  return html;
 }
 /** AM × N ngày gần nhất từ Banmoi. */
 function buildBanMoiDayMatrix(banmoi, nDays){
@@ -4894,7 +4961,7 @@ function renderOverview(){
   const nhom14dSeries = buildNhomDtLastNDays(totalKH, 14, dtNgay);
   const nhom14dSection = renderOverviewNhom14dSection(nhom14dSeries);
   const khASection = renderOverviewKhASection(buildKhCanXuLy(khNhomA, totalKH, thang, monthProgress, dtNgay));
-  const noOrder3dSection = renderOverviewNoOrder3dSection(buildKhNoOrder3d(totalKH, thang, 3));
+  const noOrder3dSection = renderOverviewNoOrder3dSection(buildKhNoOrder3d(totalKH, thang, 3, khNhomA));
   let banMoiMtd=0, banMoiMtdPrev=0;
   try{
     const bmCur=sumBanMoiKhmCungKy(banmoi, thang, elapsed);
@@ -5206,7 +5273,7 @@ function renderDtTinh(){
 /* ===================== 4) NHÓM A — PHÂN TÍCH KHÁCH HÀNG (sheet khách hàng nhóm A) ===================== */
 function renderNhomA(){
   const el = document.getElementById('nhomA');
-  const { khNhomA, dtNgay } = window._DATA;
+  const { khNhomA, dtNgay, totalKH } = window._DATA;
   if(!khNhomA || khNhomA.length<2){
     el.innerHTML = '<div class="data-banner err">Không có dữ liệu sheet khách hàng nhóm A.</div>';
     return;
@@ -5218,6 +5285,10 @@ function renderNhomA(){
   const prog = getMonthProgress(dtNgay);
   const elapsed = prog.elapsed||1;
   const totalDays = prog.totalDays||31;
+  const monthProgress = prog;
+
+  const khCanXuLySection = renderOverviewKhASection(buildKhCanXuLy(khNhomA, totalKH, thangCur, monthProgress, dtNgay));
+  const noOrder3dSection = renderOverviewNoOrder3dSection(buildKhNoOrder3d(totalKH, thangCur, 3, khNhomA));
 
   const byCust = parseKhNhomAByCust(khNhomA);
   const rows = Object.values(byCust).map(c=>{
@@ -5353,6 +5424,8 @@ function renderNhomA(){
   ${renderGlobalAmBar(listKnownAms())}
   <div class="data-banner">📅 Nguồn sheet <b>khách hàng nhóm A</b> (gid=${GID.khNhomA}). Tháng suy từ cột <b>Ngay</b>. Giảm hạng: <b>DT TB ngày × ${totalDays} ngày &lt; 45 tr</b> (qua ${elapsed} ngày).</div>
   ${kpiCards}
+  ${khCanXuLySection}
+  ${noOrder3dSection}
   ${tableCur}
   ${table14}
   ${tableChurn}
