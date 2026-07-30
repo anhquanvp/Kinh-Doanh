@@ -1560,7 +1560,7 @@ function countStopStreak(vols, dates, fromIso, maxLookback){
   let n=0, iso=fromIso;
   const lim=Math.max(1, maxLookback||60);
   for(let i=0;i<lim;i++){
-    if((dates&&dates[iso])||0)>0) break;
+    if(((dates&&dates[iso])||0)>0) break;
     n++;
     iso=isoShiftDays(iso,-1);
   }
