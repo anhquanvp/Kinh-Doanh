@@ -3013,6 +3013,7 @@ function renderOverviewProjectionSection(rows, elapsed, totalDays, thangLabel, t
   const kpiCmPeriodShow=shared?baseRows.reduce((s,r)=>s+(r.kpiCmPeriod||0),0):totalKpiCmPeriod;
   const gtcShow=shared?baseRows.reduce((s,r)=>s+(r.gtc||0),0):(totalGtc||0);
   const rateLtcCk=pct(totalActual, kpiCmPeriodShow);
+  const rateLtcMonth=pct(totalActual, kpiCmShow);
   const rateCtyCk=pct(gtcShow, kpiCmPeriodShow);
   const rateProjCty=pct(totalProj, kpiCmShow);
   const mtdGross=mtdTruocThue(totalActual);
@@ -3022,12 +3023,24 @@ function renderOverviewProjectionSection(rows, elapsed, totalDays, thangLabel, t
   const rateProjGross=pct(projGross, kpiCmShow);
   const colDat=p=>p>=100?'down':'up';
   const thangN=thangNumLabel(thangLabel);
+  const taxPct=(LTC_TAX_RATE*100).toFixed(0);
+  const ltcMetricCard=(title, sub, mtd, proj, rateCk, rateMonth, rateProj)=>`
+    <div class="kpi-card" style="margin:0">
+      <div class="lbl">${title}</div>
+      <div class="val">${fmtVndHero(mtd)}</div>
+      <div class="sub">${sub}</div>
+      <div class="cmp">Số dự kiến đạt của Vùng: <b>${fmtVnd(proj)}</b><br>
+        Tỷ lệ (dự kiến/KPI): <b class="${colDat(rateProj)}">${rateProj.toFixed(0)}%</b><br>
+        % Đạt KPI LTC <span class="ck" style="display:inline">(cùng kỳ)</span>: <b class="${colDat(rateCk)}">${rateCk.toFixed(0)}%</b><br>
+        % Đạt KPI tháng: <b class="${colDat(rateMonth)}">${rateMonth.toFixed(0)}%</b></div>
+    </div>`;
+
   let html=`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon" style="background:var(--yellow)">📈</div>KPI AM Tháng ${thangN}</div><span class="badge">${thangLabel} · KPI Cty · ${elapsed}/${totalDays} ngày</span></div>`;
   html+=`<div class="kpi-grid" style="margin:16px 22px 0;padding:0">
     <div class="kpi-card" style="margin:0">
       <div class="lbl">KPI Cty</div>
       <div class="val">${fmtVndHero(kpiCmShow)}</div>
-      <div class="cmp">Số dự kiến đạt của Vùng: <b>${fmtVnd(totalProj)}</b><br>
+      <div class="cmp">Số dự kiến đạt của Vùng <span class="ck" style="display:inline">(sau thuế)</span>: <b>${fmtVnd(totalProj)}</b><br>
         Tỷ lệ (dự kiến/KPI): <b class="${colDat(rateProjCty)}">${rateProjCty.toFixed(0)}%</b></div>
     </div>
     <div class="kpi-card" style="margin:0">
@@ -3040,35 +3053,37 @@ function renderOverviewProjectionSection(rows, elapsed, totalDays, thangLabel, t
       <div class="val"><span class="hero-amt">${rateCtyCk.toFixed(0)}</span><span class="hero-unit">%</span></div>
       <div class="cmp">AM ≥100%: <b class="down">${nDat}</b> · &lt;100%: <b class="up">${nKhong}</b></div>
     </div>
-    <div class="kpi-card" style="margin:0">
-      <div class="lbl">MTD LTC / Dự kiến</div>
-      <div class="val">${fmtVndHero(totalActual)}</div>
-      <div class="sub">Sau thuế (−${(LTC_TAX_RATE*100).toFixed(0)}%)</div>
-      <div class="cmp">MTD trước thuế: <b>${fmtVnd(mtdGross)}</b><br>
-        % Đạt KPI <span class="ck" style="display:inline">(trước thuế · cùng kỳ)</span>: <b class="${colDat(rateGrossCk)}">${rateGrossCk.toFixed(0)}%</b><br>
-        % Đạt KPI tháng (trước thuế): <b class="${colDat(rateGrossMonth)}">${rateGrossMonth.toFixed(0)}%</b><br>
-        Dự kiến trước thuế: <b>${fmtVnd(projGross)}</b> · /KPI: <b class="${colDat(rateProjGross)}">${rateProjGross.toFixed(0)}%</b><br>
-        % Đạt KPI LTC <span class="ck" style="display:inline">(sau thuế · cùng kỳ)</span>: <b class="${colDat(rateLtcCk)}">${rateLtcCk.toFixed(0)}%</b></div>
-    </div>
+  </div>`;
+  html+=`<div class="kpi-grid" style="margin:12px 22px 0;padding:0;grid-template-columns:1fr 1fr">
+    ${ltcMetricCard('MTD LTC / Dự kiến — Sau thuế', `Đã trừ thuế (−${taxPct}%)`, totalActual, totalProj, rateLtcCk, rateLtcMonth, rateProjCty)}
+    ${ltcMetricCard('MTD LTC / Dự kiến — Trước thuế', `= Sau thuế ÷ ${(1-LTC_TAX_RATE).toFixed(2)}`, mtdGross, projGross, rateGrossCk, rateGrossMonth, rateProjGross)}
   </div>`;
   html+=`<div style="margin:16px 0 0;padding:0 0 8px">`;
   if(!list.length){
     html+=emptyStateHtml(shared?'Không có KPI Cty cho AM đã lọc':'Chưa có AM có KPI Cty', 'Chọn AM khác hoặc xóa lọc (⌘K).');
   } else {
-    html+=`<div class="table-wrap"><table class="tbl-pro compact"><thead><tr>
-      <th style="width:36px">#</th>
-      <th class="col-sticky">AM</th>
-      <th class="num">Target Tháng</th>
-      <th class="num">Est Full M</th>
-      <th class="num">MTD M</th>
-      <th class="num">MTD tr.thuế</th>
-      <th class="num">% Đạt LTC</th>
-      <th class="num">% Đạt (tr.thuế)</th>
-      <th class="num">% Đạt Cty</th>
-    </tr></thead><tbody>`;
+    html+=`<div class="table-wrap"><table class="tbl-pro compact"><thead>
+      <tr>
+        <th style="width:36px" rowspan="2">#</th>
+        <th class="col-sticky" rowspan="2">AM</th>
+        <th class="num" rowspan="2">Target Tháng</th>
+        <th class="num" colspan="3" style="text-align:center;background:#F8FAFC">LTC Sau thuế (−${taxPct}%)</th>
+        <th class="num" colspan="3" style="text-align:center;background:#ECFDF5">LTC Trước thuế</th>
+        <th class="num" rowspan="2">% Đạt Cty</th>
+      </tr>
+      <tr>
+        <th class="num" style="background:#F8FAFC">Est Full M</th>
+        <th class="num" style="background:#F8FAFC">MTD</th>
+        <th class="num" style="background:#F8FAFC">% Đạt LTC</th>
+        <th class="num" style="background:#ECFDF5">Est Full M</th>
+        <th class="num" style="background:#ECFDF5">MTD</th>
+        <th class="num" style="background:#ECFDF5">% Đạt LTC</th>
+      </tr>
+    </thead><tbody>`;
     list.forEach((r,i)=>{
       const proj=r.projected!=null?r.projected:(elapsed?r.actual/elapsed*totalDays:0);
       const gross=mtdTruocThue(r.actual);
+      const projGrossAm=mtdTruocThue(proj);
       const rateGross=pct(gross, r.kpiCmPeriod||0);
       const weak=r.rateGtcCmPeriod<100;
       html+=`<tr class="${weak?'row-warn':''}">
@@ -3077,8 +3092,9 @@ function renderOverviewProjectionSection(rows, elapsed, totalDays, thangLabel, t
         <td class="num">${fmtVndCell(r.kpiCm)}</td>
         <td class="num">${fmtVndCell(proj)}</td>
         <td class="num">${fmtVndCell(r.actual)}</td>
-        <td class="num">${fmtVndCell(gross)}</td>
         <td class="num"><span class="pct-pill ${pctCls(r.rateCmPeriod)}">${r.rateCmPeriod.toFixed(0)}%</span></td>
+        <td class="num">${fmtVndCell(projGrossAm)}</td>
+        <td class="num">${fmtVndCell(gross)}</td>
         <td class="num"><span class="pct-pill ${pctCls(rateGross)}">${rateGross.toFixed(0)}%</span></td>
         <td class="num">${r.kpiCmPeriod?`<span class="pct-pill ${pctCls(r.rateGtcCmPeriod)}">${r.rateGtcCmPeriod.toFixed(0)}%</span>`:'—'}</td>
       </tr>`;
@@ -3087,15 +3103,16 @@ function renderOverviewProjectionSection(rows, elapsed, totalDays, thangLabel, t
       <td class="num">${fmtVndCell(kpiCmShow)}</td>
       <td class="num">${fmtVndCell(totalProj)}</td>
       <td class="num">${fmtVndCell(totalActual)}</td>
-      <td class="num">${fmtVndCell(mtdGross)}</td>
       <td class="num"><span class="pct-pill ${pctCls(rateLtcCk)}">${rateLtcCk.toFixed(0)}%</span></td>
+      <td class="num">${fmtVndCell(projGross)}</td>
+      <td class="num">${fmtVndCell(mtdGross)}</td>
       <td class="num"><span class="pct-pill ${pctCls(rateGrossCk)}">${rateGrossCk.toFixed(0)}%</span></td>
       <td class="num"><span class="pct-pill ${pctCls(rateCtyCk)}">${rateCtyCk.toFixed(0)}%</span></td>
     </tr>`;
     html+=`</tbody></table></div>`;
   }
   html+=`</div>`;
-  html+=analysisQuick(`KPI AM Tháng ${thangN} · MTD LTC sheet = <b>sau thuế (−${(LTC_TAX_RATE*100).toFixed(0)}%)</b> · MTD trước thuế = MTD ÷ ${(1-LTC_TAX_RATE).toFixed(2)} · % Đạt (tr.thuế) = MTD trước thuế / KPI Cty cùng kỳ · Dự kiến = MTD ÷ ${elapsed} × ${totalDays}.`);
+  html+=analysisQuick(`KPI AM Tháng ${thangN} · 2 khối số liệu giống nhau: <b>LTC Sau thuế (−${taxPct}%)</b> và <b>LTC Trước thuế</b> (= sau thuế ÷ ${(1-LTC_TAX_RATE).toFixed(2)}) · % Đạt LTC = MTD / KPI Cty cùng kỳ · Dự kiến = MTD ÷ ${elapsed} × ${totalDays}.`);
   html+=`</div>`;
   return html;
 }
