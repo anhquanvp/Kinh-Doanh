@@ -6640,6 +6640,66 @@ function sumBanMoiFullMonth(banmoi, thang){
   if(!p) return 0;
   return sumBanMoiKhmCungKy(banmoi, thang, daysInMonth(p.y, p.m));
 }
+/** SLKH (unique MaKH) + DT theo nhóm A/BCD/EF/G trong tháng. */
+function buildNhomMonthStats(totalKH, thang){
+  const empty={rows:[], totalKh:0, totalDt:0};
+  if(!totalKH||totalKH.length<2||!thang) return empty;
+  const {recs}=parseTotalKHNhomRecs(totalKH);
+  const byGrp={};
+  NHOM_LABELS.forEach(g=>{ byGrp[g]={grp:g, kh:new Set(), dt:0}; });
+  recs.forEach(r=>{
+    if(!r.grp||!byGrp[r.grp]) return;
+    if(!r.thang||!thangEq(r.thang, thang)) return;
+    if(!(r.dt>0) && !r.ma) return;
+    byGrp[r.grp].dt+=(r.dt||0);
+    if(r.ma) byGrp[r.grp].kh.add(r.ma);
+  });
+  const rows=NHOM_LABELS.map(g=>{
+    const o=byGrp[g];
+    return {grp:g, slkh:o.kh.size, dt:o.dt};
+  });
+  return {
+    rows,
+    totalKh:rows.reduce((s,r)=>s+r.slkh,0),
+    totalDt:rows.reduce((s,r)=>s+r.dt,0)
+  };
+}
+/** Bán mới (KHM) theo AM trong tháng — SLKH mới + Volume + DT. */
+function buildBanMoiByAMMonth(banmoi, thang, elapsedDays){
+  const p=parseThang(thang);
+  const maxD=Math.max(1, elapsedDays||(p?daysInMonth(p.y,p.m):31));
+  const {recs, firstByMa}=parseBanMoiSheet(banmoi);
+  const newKh=new Set();
+  Object.keys(firstByMa||{}).forEach(ma=>{
+    const f=firstByMa[ma];
+    const mk=monthKeyFromIso(f);
+    if(!mk||!thangEq(mk,thang)) return;
+    const d=+String(f).slice(8,10);
+    if(d>=1&&d<=maxD) newKh.add(ma);
+  });
+  const byAm={};
+  recs.forEach(r=>{
+    if(!r.ma || !newKh.has(r.ma)) return;
+    const mk=monthKeyFromIso(r.iso);
+    if(!mk||!thangEq(mk,thang)) return;
+    const d=+String(r.iso).slice(8,10);
+    if(d<1||d>maxD) return;
+    const am=(r.am&&r.am!=='—')?r.am:'—';
+    if(!byAm[am]) byAm[am]={am, dt:0, vol:0, kh:new Set()};
+    byAm[am].dt+=(r.dt||0);
+    byAm[am].vol+=(r.vol||0);
+    byAm[am].kh.add(r.ma);
+  });
+  const rows=Object.values(byAm).map(r=>({
+    am:r.am, dt:r.dt, vol:Math.round(r.vol||0), slkh:r.kh.size
+  })).sort((a,b)=>b.dt-a.dt||b.slkh-a.slkh);
+  return {
+    rows,
+    totalDt:rows.reduce((s,r)=>s+r.dt,0),
+    totalVol:rows.reduce((s,r)=>s+r.vol,0),
+    totalSlkh:rows.reduce((s,r)=>s+r.slkh,0)
+  };
+}
 /** So sánh KH nhóm A giữa 2 tháng: tăng / giảm / rời bỏ / giảm đơn. */
 function buildKhAMonthMom(khNhomA, thang, thangPrev){
   const byCust=parseKhNhomAByCust(khNhomA);
@@ -6686,15 +6746,18 @@ function buildMonthlyReportData(){
 
   const ltcSum=sumKetQuaMonth(ketQua, sumThang);
   const banMoiSum=sumBanMoiFullMonth(banmoi, sumThang);
-  const aSum=sumNhomDtFullMonth(totalKH, sumThang, 'A');
-  const bcdSum=sumNhomDtFullMonth(totalKH, sumThang, 'BCD');
-  const efSum=sumNhomDtFullMonth(totalKH, sumThang, 'EF');
+  const nhomStats=buildNhomMonthStats(totalKH, sumThang);
+  const aSum=(nhomStats.rows.find(r=>r.grp==='A')||{}).dt||sumNhomDtFullMonth(totalKH, sumThang, 'A');
+  const bcdSum=(nhomStats.rows.find(r=>r.grp==='BCD')||{}).dt||sumNhomDtFullMonth(totalKH, sumThang, 'BCD');
+  const efSum=(nhomStats.rows.find(r=>r.grp==='EF')||{}).dt||sumNhomDtFullMonth(totalKH, sumThang, 'EF');
+  const gSum=(nhomStats.rows.find(r=>r.grp==='G')||{}).dt||0;
   let giuCuSum=aSum+bcdSum+efSum;
   if(banMoiSum>0 && ltcSum>0) giuCuSum=Math.max(0, ltcSum-banMoiSum);
   else if(ltcSum>0){
     const alloc=allocateGiuBanMoi(ltcSum, giuCuSum, banMoiSum);
     giuCuSum=alloc.mtdGiu;
   }
+  const banMoiByAmSum=buildBanMoiByAMMonth(banmoi, sumThang, daysSum);
 
   const actualByAM=sumKetQuaByAM(ketQua, sumThang);
   const {kpiVung:kpiVungSum, kpiCm:kpiCmSum}=kpiByAMForThang(kpiAM, sumThang);
@@ -6721,7 +6784,9 @@ function buildMonthlyReportData(){
   const planProg=getMonthProgress(dtNgay);
   const mtdPlanByAM=sumAmDtNgayCungKy(dtNgay, planThang, planProg.elapsed);
   const banMoiPlanMtd=sumBanMoiKhmCungKy(banmoi, planThang, planProg.elapsed);
-  const planAmRows=uniqueList([...Object.keys(kpiVungPlan), ...Object.keys(kpiCmPlan), ...Object.keys(prevByAM)])
+  const banMoiByAmPlan=buildBanMoiByAMMonth(banmoi, planThang, planProg.elapsed);
+  const banMoiActualByAm=Object.fromEntries((banMoiByAmPlan.rows||[]).map(r=>[r.am, r]));
+  const planAmRows=uniqueList([...Object.keys(kpiVungPlan), ...Object.keys(kpiCmPlan), ...Object.keys(prevByAM), ...Object.keys(banMoiActualByAm)])
     .filter(am=>am&&!/^\d+$/.test(am))
     .map(am=>{
       const kpiCm=kpiCmPlan[am]||0;
@@ -6730,14 +6795,22 @@ function buildMonthlyReportData(){
       const giuCu=prevByAM[am]||0;
       const banMoi=Math.max(0, kpi-giuCu);
       const mtd=mtdPlanByAM[am]||0;
-      return {am, kpi, giuCu, banMoi, mtd, pctMtd:pct(mtd, kpi)};
+      const bmAct=banMoiActualByAm[am]||{dt:0,vol:0,slkh:0};
+      return {
+        am, kpi, giuCu, banMoi, mtd, pctMtd:pct(mtd, kpi),
+        banMoiMtd:bmAct.dt||0, banMoiSlkh:bmAct.slkh||0, banMoiVol:bmAct.vol||0,
+        pctBanMoi:pct(bmAct.dt||0, banMoi)
+      };
     })
     .sort((a,b)=>b.kpi-a.kpi);
   const planTot={
     kpi:planAmRows.reduce((s,r)=>s+r.kpi,0),
     giuCu:planAmRows.reduce((s,r)=>s+r.giuCu,0),
     banMoi:planAmRows.reduce((s,r)=>s+r.banMoi,0),
-    mtd:planAmRows.reduce((s,r)=>s+r.mtd,0)
+    mtd:planAmRows.reduce((s,r)=>s+r.mtd,0),
+    banMoiMtd:planAmRows.reduce((s,r)=>s+(r.banMoiMtd||0),0),
+    banMoiSlkh:planAmRows.reduce((s,r)=>s+(r.banMoiSlkh||0),0),
+    banMoiVol:planAmRows.reduce((s,r)=>s+(r.banMoiVol||0),0)
   };
 
   return {
@@ -6749,7 +6822,8 @@ function buildMonthlyReportData(){
     shortPlan:shortThangT(planLabel),
     shortPrev:shortThangT(sumPrevLabel),
     daysSum,
-    ltcSum, giuCuSum, banMoiSum, aSum, bcdSum, efSum,
+    ltcSum, giuCuSum, banMoiSum, aSum, bcdSum, efSum, gSum,
+    nhomStats, banMoiByAmSum, banMoiByAmPlan,
     amKpiRows, amDat, amMiss,
     khA,
     planAmRows, planTot, banMoiPlanMtd,
@@ -6758,6 +6832,22 @@ function buildMonthlyReportData(){
 }
 function renderMonthlyReportDocHtml(d){
   const h=(v)=>docEsc(v==null?'':v);
+  const nhom=(d.nhomStats&&d.nhomStats.rows)||[];
+  const nhomRows=nhom.map(r=>`<tr>
+    <td align="center"><b>${h(r.grp)}</b></td>
+    <td align="right">${fmt(r.slkh||0)}</td>
+    <td align="right">${h(fmtVnd(r.dt||0))}</td>
+    <td align="right">${h(d.nhomStats.totalDt?pct(r.dt||0, d.nhomStats.totalDt).toFixed(1)+'%':'—')}</td>
+  </tr>`).join('') || `<tr><td colspan="4"><i>Chưa có dữ liệu nhóm KH tháng ${h(d.shortSum)}</i></td></tr>`;
+
+  const bmSumRows=((d.banMoiByAmSum&&d.banMoiByAmSum.rows)||[]).map(r=>`<tr>
+    <td>${h(r.am)}</td>
+    <td align="right">${fmt(r.slkh||0)}</td>
+    <td align="right">${fmt(r.vol||0)}</td>
+    <td align="right">${h(fmtVnd(r.dt||0))}</td>
+    <td align="right">${h(d.banMoiByAmSum.totalDt?pct(r.dt||0, d.banMoiByAmSum.totalDt).toFixed(1)+'%':'—')}</td>
+  </tr>`).join('') || `<tr><td colspan="5"><i>Chưa có bán mới KHM tháng ${h(d.shortSum)}</i></td></tr>`;
+
   const kpiRows=(d.amKpiRows||[]).map(r=>`<tr>
     <td>${h(r.am)}</td>
     <td align="right">${h(fmtVnd(r.actual))}</td>
@@ -6771,9 +6861,19 @@ function renderMonthlyReportDocHtml(d){
     <td align="right">${h(fmtVnd(r.kpi))}</td>
     <td align="right">${h(fmtVnd(r.giuCu))}</td>
     <td align="right">${h(fmtVnd(r.banMoi))}</td>
+    <td align="right">${h(fmtVnd(r.banMoiMtd||0))}</td>
+    <td align="right">${fmt(r.banMoiSlkh||0)}</td>
+    <td align="right">${h(r.banMoi?r.pctBanMoi.toFixed(0)+'%':'—')}</td>
     <td align="right">${h(fmtVnd(r.mtd))}</td>
     <td align="right">${h(r.kpi?r.pctMtd.toFixed(0)+'%':'—')}</td>
-  </tr>`).join('') || `<tr><td colspan="6"><i>Chưa có kế hoạch AM tháng ${h(d.shortPlan)}</i></td></tr>`;
+  </tr>`).join('') || `<tr><td colspan="9"><i>Chưa có kế hoạch AM tháng ${h(d.shortPlan)}</i></td></tr>`;
+
+  const bmPlanRows=((d.banMoiByAmPlan&&d.banMoiByAmPlan.rows)||[]).map(r=>`<tr>
+    <td>${h(r.am)}</td>
+    <td align="right">${fmt(r.slkh||0)}</td>
+    <td align="right">${fmt(r.vol||0)}</td>
+    <td align="right">${h(fmtVnd(r.dt||0))}</td>
+  </tr>`).join('') || `<tr><td colspan="4"><i>Chưa có bán mới KHM MTD ${h(d.shortPlan)}</i></td></tr>`;
 
   const churn=(d.khA.churnRows||[]).slice(0,40);
   const giamDon=(d.khA.giamDonRows||[]).slice(0,40);
@@ -6801,6 +6901,7 @@ function renderMonthlyReportDocHtml(d){
 body{font-family:'Times New Roman',Times,serif;font-size:12pt;line-height:1.45;color:#000}
 h1{font-size:14pt;text-align:center;text-transform:uppercase;margin:0 0 6px}
 h2{font-size:12pt;text-transform:uppercase;margin:16px 0 8px}
+h3{font-size:12pt;font-weight:bold;margin:14px 0 6px}
 p{margin:6px 0}
 table.doc{border-collapse:collapse;width:100%;margin:8px 0 12px}
 table.doc th,table.doc td{border:1px solid #000;padding:5px 7px;font-size:11pt;vertical-align:middle}
@@ -6815,33 +6916,79 @@ table.doc th{background:#F3F4F6;font-weight:bold;text-align:center}
 <p><b>Doanh thu LTC:</b> ${h(fmtVnd(d.ltcSum))} &nbsp;|&nbsp;
 <b>Giữ cũ (A/BCD/EF):</b> ${h(fmtVnd(d.giuCuSum))} &nbsp;|&nbsp;
 <b>Bán mới (KHM):</b> ${h(fmtVnd(d.banMoiSum))}</p>
-<p>Trong giữ cũ theo nhóm (TotalKH): A <b>${h(fmtVnd(d.aSum))}</b> · BCD <b>${h(fmtVnd(d.bcdSum))}</b> · EF <b>${h(fmtVnd(d.efSum))}</b></p>
 
-<h3>1.1. KPI ${h(d.shortSum)} theo AM — Đạt / Không đạt</h3>
+<h3>1.1. Số lượng KH &amp; doanh thu theo nhóm</h3>
+<p>Nguồn TotalKH · SLKH = số MaKH unique có phát sinh DT trong ${h(d.shortSum)}.</p>
+<table class="doc"><thead><tr>
+  <th>Nhóm</th><th>SLKH</th><th>Doanh thu</th><th>% DT</th>
+</tr></thead><tbody>${nhomRows}
+<tr>
+  <td align="center"><b>Tổng</b></td>
+  <td align="right"><b>${fmt((d.nhomStats&&d.nhomStats.totalKh)||0)}</b></td>
+  <td align="right"><b>${h(fmtVnd((d.nhomStats&&d.nhomStats.totalDt)||0))}</b></td>
+  <td align="right"><b>100%</b></td>
+</tr>
+</tbody></table>
+<p>Giữ cũ: A <b>${h(fmtVnd(d.aSum))}</b> · BCD <b>${h(fmtVnd(d.bcdSum))}</b> · EF <b>${h(fmtVnd(d.efSum))}</b>
+&nbsp;|&nbsp; Bán mới (nhóm G / TotalKH): <b>${h(fmtVnd(d.gSum||0))}</b>
+&nbsp;|&nbsp; Bán mới KHM (Banmoi): <b>${h(fmtVnd(d.banMoiSum))}</b></p>
+
+<h3>1.2. Bán mới theo AM — ${h(d.shortSum)}</h3>
+<p>KHM mới trong tháng · Tổng: <b>${fmt((d.banMoiByAmSum&&d.banMoiByAmSum.totalSlkh)||0)}</b> KH ·
+Vol <b>${fmt((d.banMoiByAmSum&&d.banMoiByAmSum.totalVol)||0)}</b> ·
+DT <b>${h(fmtVnd((d.banMoiByAmSum&&d.banMoiByAmSum.totalDt)||d.banMoiSum||0))}</b></p>
+<table class="doc"><thead><tr>
+  <th>AM</th><th>SLKH mới</th><th>Volume</th><th>Doanh thu KHM</th><th>% DT</th>
+</tr></thead><tbody>${bmSumRows}
+<tr>
+  <td><b>Tổng</b></td>
+  <td align="right"><b>${fmt((d.banMoiByAmSum&&d.banMoiByAmSum.totalSlkh)||0)}</b></td>
+  <td align="right"><b>${fmt((d.banMoiByAmSum&&d.banMoiByAmSum.totalVol)||0)}</b></td>
+  <td align="right"><b>${h(fmtVnd((d.banMoiByAmSum&&d.banMoiByAmSum.totalDt)||0))}</b></td>
+  <td align="right"><b>100%</b></td>
+</tr>
+</tbody></table>
+
+<h3>1.3. KPI ${h(d.shortSum)} theo AM — Đạt / Không đạt</h3>
 <p>Đạt: <span class="ok">${d.amDat.length}</span> AM &nbsp;·&nbsp; Không đạt: <span class="bad">${d.amMiss.length}</span> AM
 ${d.amMiss.length?` (${d.amMiss.map(r=>h(r.am)).join(', ')})`:''}</p>
 <table class="doc"><thead><tr>
   <th>AM</th><th>Thực đạt ${h(d.shortSum)}</th><th>KPI</th><th>% Đạt</th><th>Kết quả</th>
 </tr></thead><tbody>${kpiRows}</tbody></table>
 
-<h3>1.2. Khách hàng nhóm A — tăng / giảm ${h(d.shortSum)} vs ${h(d.shortPrev)}</h3>
+<h3>1.4. Khách hàng nhóm A — tăng / giảm ${h(d.shortSum)} vs ${h(d.shortPrev)}</h3>
 <p>Tổng KH A có DT: <b>${d.khA.total}</b> · Tăng: <b class="ok">${d.khA.nTang}</b> · Giảm: <b class="bad">${d.khA.nGiam}</b>
 · DT A ${h(d.shortSum)}: <b>${h(fmtVnd(d.khA.dtCur))}</b> (vs ${h(d.shortPrev)}: ${h(fmtVnd(d.khA.dtPrev))} · ${h(fmtMomPct(d.khA.dtCur, d.khA.dtPrev))})</p>
 
 <h2>2. Kế hoạch tháng ${h(d.shortPlan)} — Giữ cũ / Bán mới theo AM</h2>
-<p>Công thức: <i>Giữ cũ = thực đạt ${h(d.shortSum)} theo AM</i> · <i>Bán mới = max(0, KPI ${h(d.shortPlan)} − Giữ cũ)</i>.
+<p>Công thức: <i>Giữ cũ = thực đạt ${h(d.shortSum)} theo AM</i> · <i>Target bán mới = max(0, KPI ${h(d.shortPlan)} − Giữ cũ)</i>.
 MTD ${h(d.shortPlan)} tính đến ngày ${d.planElapsed}/${d.planTotalDays}.
 Bán mới KHM MTD vùng: <b>${h(fmtVnd(d.banMoiPlanMtd))}</b>.</p>
 <table class="doc"><thead><tr>
-  <th>AM</th><th>KPI ${h(d.shortPlan)}</th><th>KH Giữ cũ</th><th>KH Bán mới</th><th>MTD LTC</th><th>% MTD/KPI</th>
+  <th>AM</th><th>KPI ${h(d.shortPlan)}</th><th>KH Giữ cũ</th><th>Target Bán mới</th><th>KHM MTD</th><th>SLKH mới</th><th>% KHM/Target</th><th>MTD LTC</th><th>% MTD/KPI</th>
 </tr></thead><tbody>${planRows}
 <tr>
   <td><b>Tổng vùng</b></td>
   <td align="right"><b>${h(fmtVnd(d.planTot.kpi))}</b></td>
   <td align="right"><b>${h(fmtVnd(d.planTot.giuCu))}</b></td>
   <td align="right"><b>${h(fmtVnd(d.planTot.banMoi))}</b></td>
+  <td align="right"><b>${h(fmtVnd(d.planTot.banMoiMtd||0))}</b></td>
+  <td align="right"><b>${fmt(d.planTot.banMoiSlkh||0)}</b></td>
+  <td align="right"><b>${h(d.planTot.banMoi?pct(d.planTot.banMoiMtd||0,d.planTot.banMoi).toFixed(0)+'%':'—')}</b></td>
   <td align="right"><b>${h(fmtVnd(d.planTot.mtd))}</b></td>
   <td align="right"><b>${h(d.planTot.kpi?pct(d.planTot.mtd,d.planTot.kpi).toFixed(0)+'%':'—')}</b></td>
+</tr>
+</tbody></table>
+
+<h3>2.1. Bán mới theo AM — MTD ${h(d.shortPlan)}</h3>
+<table class="doc"><thead><tr>
+  <th>AM</th><th>SLKH mới</th><th>Volume</th><th>Doanh thu KHM</th>
+</tr></thead><tbody>${bmPlanRows}
+<tr>
+  <td><b>Tổng</b></td>
+  <td align="right"><b>${fmt((d.banMoiByAmPlan&&d.banMoiByAmPlan.totalSlkh)||0)}</b></td>
+  <td align="right"><b>${fmt((d.banMoiByAmPlan&&d.banMoiByAmPlan.totalVol)||0)}</b></td>
+  <td align="right"><b>${h(fmtVnd((d.banMoiByAmPlan&&d.banMoiByAmPlan.totalDt)||0))}</b></td>
 </tr>
 </tbody></table>
 
