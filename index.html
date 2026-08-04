@@ -551,7 +551,7 @@ const GID = {
 };
 const SHEET = {
   dtThang2025: 'DT-Tháng2025',  // Doanh thu 2025 — fetch theo tên sheet
-  dtThang2026: 'DT-Tháng',       // Doanh thu 2026 — sheet bổ sung (vd. 2026/6 + 2026/06)
+  dtThang2026: 'DT-Tháng',       // Doanh thu 2026 — sheet bổ sung (vd. 2026/6, 2026/06, 6/2026, 06/2026)
   doanhThuGTC: 'DoanhThu-GTC',    // Doanh thu GTC — cấu trúc giống DT-Tháng
   totalKH: 'TotalKH',              // Chi tiết KH theo nhóm (alias: KHTotal)
   banmoi: 'Banmoi'                 // Bán mới / KHM — DT lấy TC / giao trả TC (chưa VAT)
@@ -3005,6 +3005,8 @@ function fmtNhomWowCell(parts){
   return `<div class="nhom-wow-stack">${badges.join('')}</div>`;
 }
 function thangNumLabel(thangOrLabel){
+  const p=parseThang(thangOrLabel);
+  if(p) return String(p.m);
   const m=String(thangOrLabel||'').match(/\/0?(\d+)$/);
   return m?String(+m[1]):String(thangOrLabel||'');
 }
@@ -3519,11 +3521,21 @@ function renderNhomTinhCard(recs, maxDate){
 }
 function parseThangSheet(s){
   s=(s||'').trim().replace(/\s+/g,'');
+  // YYYY/M · YYYY/MM · YYYY/tuần (≥13 trong layout hybrid)
   let m=s.match(/^(\d{4})[\/\-](\d{1,2})$/);
-  if(!m) return null;
-  const y=+m[1], p=+m[2];
-  if(p<0) return null;
-  return {y,p,key:`${y}/${p}`};
+  if(m){
+    const y=+m[1], p=+m[2];
+    if(p<0) return null;
+    return {y,p,key:`${y}/${p}`};
+  }
+  // M/YYYY · MM/YYYY (vd. 7/2026, 07/2026) — chỉ tháng lịch 1–12
+  m=s.match(/^(\d{1,2})[\/\-](\d{4})$/);
+  if(m){
+    const p=+m[1], y=+m[2];
+    if(p<1||p>12) return null;
+    return {y,p,key:`${y}/${p}`};
+  }
+  return null;
 }
 function detectDtThangLayout(dtThang, yearOnly){
   if(!dtThang||dtThang.length<2) return {hybrid:false,maxPeriod:0};
@@ -3647,11 +3659,13 @@ function sumSheetDtMonth(sheet, thang){
   const h=sheet[0];
   const iThang=idxOf(h,'Thang'), iDT=idxOf(h,'DoanhThu');
   if(iThang<0||iDT<0) return 0;
+  const data=fillDownThangColumn(sheet, iThang);
   let total=0;
-  for(let i=1;i<sheet.length;i++){
-    const r=sheet[i];
+  for(let i=1;i<data.length;i++){
+    const r=data[i];
     const cell=(r[iThang]||'').trim();
     if(cell && !rowMatchesPreferredThang(cell, thang, null)) continue;
+    if(!cell) continue;
     total+=parseVNNum(r[iDT]);
   }
   return total;
@@ -3663,11 +3677,13 @@ function sumGtcByAM(sheet, thang){
   const iThang=idxOf(h,'Thang'), iDT=idxOf(h,'DoanhThu');
   const iAmC=idxOf(h,'AM Chuẩn'), iAM=idxOf(h,'AM'), iVung=idxOf(h,'Vung');
   if(iThang<0||iDT<0) return {};
+  const data=fillDownThangColumn(sheet, iThang);
   const by={};
-  for(let i=1;i<sheet.length;i++){
-    const r=sheet[i];
+  for(let i=1;i<data.length;i++){
+    const r=data[i];
     const cell=(r[iThang]||'').trim();
     if(cell && !rowMatchesPreferredThang(cell, thang, null)) continue;
+    if(!cell) continue;
     if(iVung>=0 && (r[iVung]||'').trim() && !isVungTnt(r[iVung])) continue;
     let am=(iAmC>=0?(r[iAmC]||''):'').trim();
     if(!am && iAM>=0){
@@ -3883,6 +3899,8 @@ function suggestAmBanMoiNhanXet(r){
   return 'Cần theo dõi thêm và hỗ trợ AM đẩy bán mới';
 }
 function shortThangT(label){
+  const p=parseThang(label);
+  if(p) return `T${p.m}`;
   const m=String(label||'').match(/\/0?(\d+)$/);
   if(m) return `T${+m[1]}`;
   const m2=String(label||'').match(/T\s*0?(\d+)/i);
@@ -4627,9 +4645,20 @@ function lastNgayInMonth(dates, thang){
 }
 function parseThang(s){
   s=(s||'').trim().replace(/\s+/g,'');
-  const m=s.match(/^(\d{4})[\/\-](\d{1,2})$/);
-  if(!m) return null;
-  return { y:+m[1], m:+m[2] };
+  // YYYY/M · YYYY/MM
+  let m=s.match(/^(\d{4})[\/\-](\d{1,2})$/);
+  if(m){
+    const y=+m[1], mo=+m[2];
+    if(mo>=1&&mo<=12) return { y, m:mo };
+    return null;
+  }
+  // M/YYYY · MM/YYYY (vd. 7/2026, 07/2026)
+  m=s.match(/^(\d{1,2})[\/\-](\d{4})$/);
+  if(m){
+    const mo=+m[1], y=+m[2];
+    if(mo>=1&&mo<=12) return { y, m:mo };
+  }
+  return null;
 }
 function monthKeyNorm(s){
   const p=parseThang(s);
@@ -4652,22 +4681,25 @@ function uniqueMonthsSorted(monthKeys){
 function canonicalThangKey(y,m){
   return `${y}/${String(m).padStart(2,'0')}`;
 }
+/** Mọi biến thể chuỗi tháng cùng 1 kỳ: 2026/7, 2026/07, 7/2026, 07/2026. */
+function thangAliases(y,m){
+  const mm=String(m).padStart(2,'0');
+  return [`${y}/${m}`, `${y}/${mm}`, `${m}/${y}`, `${mm}/${y}`];
+}
 function thangCellPreferred(rows, iThang, thang){
   const p=parseThang(thang);
   if(!p||iThang<0) return null;
-  const canon=canonicalThangKey(p.y,p.m), short=`${p.y}/${p.m}`;
-  let hasCanon=false, hasShort=false;
+  const aliases=thangAliases(p.y,p.m);
+  const found=new Set();
   rows.forEach(r=>{
     const t=(r[iThang]||'').trim();
-    if(t===canon) hasCanon=true;
-    if(t===short) hasShort=true;
+    if(aliases.includes(t)) found.add(t);
   });
-  if(hasCanon) return canon;
-  if(hasShort) return short;
+  for(const a of aliases) if(found.has(a)) return a;
   return null;
 }
 function rowMatchesPreferredThang(cell, thang, preferred){
-  // Luôn so theo y/m đã chuẩn hóa — cộng cả 2026/7 và 2026/07
+  // Chuẩn hóa y/m — cộng cả 2026/7, 2026/07, 7/2026, 07/2026
   if(!cell) return true;
   return thangEq(cell.trim(), thang);
 }
@@ -4961,7 +4993,7 @@ function renderOverview(){
     const am=r[iAMk];
     const vung=parseVNNum(r[iKPIVung]);
     const cm=iKPICm>=0?parseVNNum(r[iKPICm]):0;
-    // Tránh nhân đôi KPI nếu cùng AM có cả 2026/7 và 2026/07 cùng giá trị
+    // Tránh nhân đôi KPI nếu cùng AM có cả 2026/7, 2026/07, 7/2026, 07/2026
     if(!(am in kpiVungByAM) || vung>kpiVungByAM[am]){
       if(am in kpiVungByAM) totalKpiVung-=kpiVungByAM[am];
       kpiVungByAM[am]=vung;
