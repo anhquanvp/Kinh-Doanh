@@ -4180,14 +4180,32 @@ function fmtMomPct(cur, prev){
   return (p>=0?'+':'')+p.toFixed(1)+'%';
 }
 function reconcileDtWithKetQua(recs, ketQua, thang){
-  const p=parseThang(thang);
-  if(!p||!ketQua||ketQua.length<2) return recs;
-  const kqTotal=sumKetQuaMonth(ketQua, thang);
-  if(!kqTotal) return recs;
-  const dtTotal=recs.filter(r=>r.y===p.y&&r.m===p.m).reduce((s,r)=>s+r.dt,0);
-  if(!dtTotal||dtTotal>=kqTotal*0.98) return recs;
-  const ratio=kqTotal/dtTotal;
-  return recs.map(r=>(r.y===p.y&&r.m===p.m)?{...r,dt:r.dt*ratio}:r);
+  if(!ketQua||ketQua.length<2||!recs||!recs.length) return recs;
+  const months=new Set();
+  const h=ketQua[0];
+  const iThang=idxOf(h,'Thang');
+  if(iThang>=0){
+    const data=fillDownThangColumn(ketQua, iThang);
+    for(let i=1;i<data.length;i++){
+      const p=parseThang((data[i][iThang]||'').trim());
+      if(p) months.add(`${p.y}/${p.m}`);
+    }
+  }
+  const cur=parseThang(thang);
+  if(cur) months.add(`${cur.y}/${cur.m}`);
+  if(!months.size) return recs;
+  let out=recs;
+  months.forEach(mk=>{
+    const p=parseThang(mk);
+    if(!p) return;
+    const kqTotal=sumKetQuaMonth(ketQua, mk);
+    if(!kqTotal) return;
+    const dtTotal=out.filter(r=>r.y===p.y&&r.m===p.m).reduce((s,r)=>s+r.dt,0);
+    if(!dtTotal||dtTotal>=kqTotal*0.98) return;
+    const ratio=kqTotal/dtTotal;
+    out=out.map(r=>(r.y===p.y&&r.m===p.m)?{...r,dt:r.dt*ratio}:r);
+  });
+  return out;
 }
 function aggMonthlyByYear(recs, year){
   const a=asOfParts();
@@ -4707,11 +4725,15 @@ function sumKetQuaMonth(ketQua, thang){
   if(!ketQua||ketQua.length<2) return 0;
   const h=ketQua[0];
   const iAM=idxOf(h,'AM Chuẩn'), iDT=idxOf(h,'DoanhThu'), iThang=idxOf(h,'Thang');
+  const data=iThang>=0?fillDownThangColumn(ketQua, iThang):ketQua;
   let total=0;
-  for(let i=1;i<ketQua.length;i++){
-    const r=ketQua[i];
+  for(let i=1;i<data.length;i++){
+    const r=data[i];
     if(!r[iAM]) continue;
-    if(iThang>=0&&r[iThang]&&!rowMatchesPreferredThang(r[iThang], thang, null)) continue;
+    if(iThang>=0){
+      const cell=(r[iThang]||'').trim();
+      if(!cell||!rowMatchesPreferredThang(cell, thang, null)) continue;
+    }
     total+=parseVNNum(r[iDT]);
   }
   return total;
@@ -6636,10 +6658,14 @@ function sumKetQuaByAM(ketQua, thang){
   if(!ketQua||ketQua.length<2) return by;
   const h=ketQua[0];
   const iAM=idxOf(h,'AM Chuẩn'), iDT=idxOf(h,'DoanhThu'), iThang=idxOf(h,'Thang');
-  for(let i=1;i<ketQua.length;i++){
-    const r=ketQua[i];
+  const data=iThang>=0?fillDownThangColumn(ketQua, iThang):ketQua;
+  for(let i=1;i<data.length;i++){
+    const r=data[i];
     if(!r[iAM]) continue;
-    if(iThang>=0&&r[iThang]&&!rowMatchesPreferredThang(r[iThang], thang, null)) continue;
+    if(iThang>=0){
+      const cell=(r[iThang]||'').trim();
+      if(!cell||!rowMatchesPreferredThang(cell, thang, null)) continue;
+    }
     by[r[iAM]]=(by[r[iAM]]||0)+parseVNNum(r[iDT]);
   }
   return by;
@@ -6756,11 +6782,26 @@ function buildKhAMonthMom(khNhomA, thang, thangPrev){
   const giamRows=rows.filter(r=>r.giam).sort((a,b)=>a.delta-b.delta);
   const churnRows=rows.filter(r=>r.churn).sort((a,b)=>b.dtPrev-a.dtPrev);
   const giamDonRows=rows.filter(r=>r.giamDon).sort((a,b)=>a.pctMom-b.pctMom);
+  const byAmMap={};
+  rows.forEach(r=>{
+    const am=r.am||'—';
+    if(!byAmMap[am]) byAmMap[am]={am, total:0, nTang:0, nGiam:0, nChurn:0, nGiamDon:0, nMoi:0, dtCur:0, dtPrev:0};
+    const o=byAmMap[am];
+    o.total++;
+    if(r.tang) o.nTang++;
+    if(r.giam) o.nGiam++;
+    if(r.churn) o.nChurn++;
+    if(r.giamDon) o.nGiamDon++;
+    if(r.dtPrev<=0&&r.dtCur>0) o.nMoi++;
+    o.dtCur+=r.dtCur;
+    o.dtPrev+=r.dtPrev;
+  });
+  const byAm=Object.values(byAmMap).sort((a,b)=>b.dtCur-a.dtCur||a.am.localeCompare(b.am,'vi'));
   return {
     total:rows.length,
     nTang:tangRows.length, nGiam:giamRows.length,
     nChurn:churnRows.length, nGiamDon:giamDonRows.length,
-    tangRows, giamRows, churnRows, giamDonRows,
+    tangRows, giamRows, churnRows, giamDonRows, byAm,
     dtCur:rows.reduce((s,r)=>s+r.dtCur,0),
     dtPrev:rows.reduce((s,r)=>s+r.dtPrev,0)
   };
@@ -6909,6 +6950,25 @@ function renderMonthlyReportDocHtml(d){
 
   const churn=(d.khA.churnRows||[]).slice(0,40);
   const giamDon=(d.khA.giamDonRows||[]).slice(0,40);
+  const khAByAm=(d.khA.byAm||[]);
+  const khAByAmRows=khAByAm.map(r=>`<tr>
+    <td>${h(r.am)}</td>
+    <td align="right">${fmt(r.total||0)}</td>
+    <td align="right" style="color:#0D9F6E"><b>${fmt(r.nTang||0)}</b></td>
+    <td align="right" style="color:#D92D20"><b>${fmt(r.nGiam||0)}</b></td>
+    <td align="right">${fmt(r.nChurn||0)}</td>
+    <td align="right">${h(fmtVnd(r.dtCur||0))}</td>
+    <td align="right">${h(fmtVnd(r.dtPrev||0))}</td>
+    <td align="right">${h(fmtMomPct(r.dtCur||0, r.dtPrev||0))}</td>
+  </tr>`).join('') || `<tr><td colspan="8"><i>Chưa có dữ liệu KH nhóm A theo AM.</i></td></tr>`;
+  const khAByAmTot={
+    total:khAByAm.reduce((s,r)=>s+(r.total||0),0),
+    nTang:khAByAm.reduce((s,r)=>s+(r.nTang||0),0),
+    nGiam:khAByAm.reduce((s,r)=>s+(r.nGiam||0),0),
+    nChurn:khAByAm.reduce((s,r)=>s+(r.nChurn||0),0),
+    dtCur:khAByAm.reduce((s,r)=>s+(r.dtCur||0),0),
+    dtPrev:khAByAm.reduce((s,r)=>s+(r.dtPrev||0),0)
+  };
   const churnHtml=churn.map((r,i)=>`<tr>
     <td align="center">${i+1}</td>
     <td>${h(r.ten)}</td>
@@ -6991,6 +7051,28 @@ ${d.amMiss.length?` (${d.amMiss.map(r=>h(r.am)).join(', ')})`:''}</p>
 <h3>1.4. Khách hàng nhóm A — tăng / giảm ${h(d.shortSum)} vs ${h(d.shortPrev)}</h3>
 <p>Tổng KH A có DT: <b>${d.khA.total}</b> · Tăng: <b class="ok">${d.khA.nTang}</b> · Giảm: <b class="bad">${d.khA.nGiam}</b>
 · DT A ${h(d.shortSum)}: <b>${h(fmtVnd(d.khA.dtCur))}</b> (vs ${h(d.shortPrev)}: ${h(fmtVnd(d.khA.dtPrev))} · ${h(fmtMomPct(d.khA.dtCur, d.khA.dtPrev))})</p>
+<table class="doc"><thead><tr>
+  <th>AM</th>
+  <th>SLKH A</th>
+  <th>Tăng</th>
+  <th>Giảm</th>
+  <th>Rời bỏ</th>
+  <th>DT A ${h(d.shortSum)}</th>
+  <th>DT A ${h(d.shortPrev)}</th>
+  <th>% MoM</th>
+</tr></thead><tbody>${khAByAmRows}
+<tr>
+  <td><b>Tổng</b></td>
+  <td align="right"><b>${fmt(khAByAmTot.total)}</b></td>
+  <td align="right" style="color:#0D9F6E"><b>${fmt(khAByAmTot.nTang)}</b></td>
+  <td align="right" style="color:#D92D20"><b>${fmt(khAByAmTot.nGiam)}</b></td>
+  <td align="right"><b>${fmt(khAByAmTot.nChurn)}</b></td>
+  <td align="right"><b>${h(fmtVnd(khAByAmTot.dtCur))}</b></td>
+  <td align="right"><b>${h(fmtVnd(khAByAmTot.dtPrev))}</b></td>
+  <td align="right"><b>${h(fmtMomPct(khAByAmTot.dtCur, khAByAmTot.dtPrev))}</b></td>
+</tr>
+</tbody></table>
+<p style="font-size:10.5pt;color:#444"><i>Tăng = DT ${h(d.shortSum)} &gt; DT ${h(d.shortPrev)} · Giảm = còn DT nhưng thấp hơn tháng trước · Rời bỏ = có DT ${h(d.shortPrev)}, hết DT ${h(d.shortSum)}.</i></p>
 
 <h2>2. Kế hoạch tháng ${h(d.shortPlan)} — Giữ cũ / Bán mới theo AM</h2>
 <p>Công thức: <i>Giữ cũ = thực đạt ${h(d.shortSum)} theo AM</i> · <i>Target bán mới = max(0, KPI ${h(d.shortPlan)} − Giữ cũ)</i>.
